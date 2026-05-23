@@ -1,0 +1,2140 @@
+{% extends "base.html" %}
+{% block title %}教师后台 - 基于DeepSeek的WPS作业智能批阅与分层推送决策系统{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="bi bi-speedometer2"></i> 教师管理后台</h3>
+        <button class="btn btn-outline-primary" onclick="loadData()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新数据
+        </button>
+    </div>
+
+    <!-- 标签页导航 -->
+    <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="bi bi-grid me-1"></i> 数据概览
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis" type="button" role="tab">
+                <i class="bi bi-graph-up-arrow me-1"></i> 学情分析
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="homework-tab" data-bs-toggle="tab" data-bs-target="#homework" type="button" role="tab">
+                <i class="bi bi-clipboard2-check me-1"></i> 作业管理
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="students-tab" data-bs-toggle="tab" data-bs-target="#students" type="button" role="tab">
+                <i class="bi bi-person-lines-fill me-1"></i> 学生管理
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="practice-tab" data-bs-toggle="tab" data-bs-target="#practice" type="button" role="tab">
+                <i class="bi bi-file-earmark-zip me-1"></i> 练习文档
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                <i class="bi bi-gear me-1"></i> 系统设置
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="teachers-tab" data-bs-toggle="tab" data-bs-target="#teachers" type="button" role="tab">
+                <i class="bi bi-person-badge me-1"></i> 教师管理
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="lessonplan-tab" data-bs-toggle="tab" data-bs-target="#lessonplan" type="button" role="tab">
+                <i class="bi bi-journal-text me-1"></i> 教案生成
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" href="/admin/knowledge-base" type="button">
+                <i class="bi bi-book me-1"></i> 知识库管理
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" href="/admin/materials" type="button">
+                <i class="bi bi-file-earmark-arrow-up me-1"></i> 素材管理
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab内容 -->
+    <div class="tab-content" id="adminTabContent">
+
+        <!-- ========== 数据概览 ========== -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <!-- 统计卡片 -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3" style="border-radius: 12px;">
+                        <div class="d-flex align-items-center">
+                            <div class="feature-icon me-3" style="background: #ebf8ff; color: #2b6cb0; width: 48px; height: 48px; font-size: 1.2rem;">
+                                <i class="bi bi-people"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">总提交数</div>
+                                <div class="fs-3 fw-bold" id="totalSubmissions">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3" style="border-radius: 12px;">
+                        <div class="d-flex align-items-center">
+                            <div class="feature-icon me-3" style="background: #f0fff4; color: #38a169; width: 48px; height: 48px; font-size: 1.2rem;">
+                                <i class="bi bi-graph-up"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">平均分</div>
+                                <div class="fs-3 fw-bold" id="avgScore">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3" style="border-radius: 12px;">
+                        <div class="d-flex align-items-center">
+                            <div class="feature-icon me-3" style="background: #fffaf0; color: #dd6b20; width: 48px; height: 48px; font-size: 1.2rem;">
+                                <i class="bi bi-star"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">优秀率</div>
+                                <div class="fs-3 fw-bold" id="excellentRate">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3" style="border-radius: 12px; cursor: pointer;" onclick="showAttentionList()">
+                        <div class="d-flex align-items-center">
+                            <div class="feature-icon me-3" style="background: #fff5f5; color: #e53e3e; width: 48px; height: 48px; font-size: 1.2rem;">
+                                <i class="bi bi-exclamation-circle"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">需关注 <i class="bi bi-chevron-right small"></i></div>
+                                <div class="fs-3 fw-bold" id="failRate">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 等级分布 -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="card-body p-4">
+                            <h5><i class="bi bi-pie-chart"></i> 等级分布</h5>
+                            <div id="levelDistribution">
+                                <!-- 由JS渲染 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="card-body p-4">
+                            <h5><i class="bi bi-bar-chart"></i> 任务分布</h5>
+                            <div id="taskDistribution">
+                                <!-- 由JS渲染 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 提交记录列表 -->
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="bi bi-table"></i> 提交记录</h5>
+                        <button class="btn btn-outline-danger btn-sm" onclick="clearAllSubmissions()">
+                            <i class="bi bi-trash3"></i> 清空所有记录
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>提交编号</th>
+                                    <th>学生</th>
+                                    <th>班级</th>
+                                    <th>任务</th>
+                                    <th>得分</th>
+                                    <th>等级</th>
+                                    <th>提交时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="submissionTable">
+                                <!-- 由JS渲染 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyState" class="text-center py-5 d-none">
+                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                        <p class="text-muted mt-3">暂无提交记录</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 作业管理 ========== -->
+        <div class="tab-pane fade" id="homework" role="tabpanel">
+            <!-- 班级筛选和操作按钮 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex align-items-center">
+                    <label class="me-2 fw-bold">班级筛选：</label>
+                    <select class="form-select" style="width:200px;" id="hwClassFilter" onchange="loadHomeworkOverview()">
+                        <option value="">全部班级</option>
+                    </select>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-muted">
+                        共 <span id="hwStudentCount">0</span> 名学生
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 作业卡片列表 -->
+            <div class="row g-4" id="homeworkCards">
+                <!-- 由JS渲染 -->
+            </div>
+            <div id="homeworkEmpty" class="text-center py-5 d-none">
+                <i class="bi bi-inbox fs-1 text-muted"></i>
+                <p class="text-muted mt-3">暂无作业提交记录</p>
+            </div>
+        </div>
+        
+        <!-- ========== 作业详情（隐藏面板） ========== -->
+        <div class="tab-pane fade" id="homeworkDetail" role="tabpanel">
+            <div class="d-flex align-items-center mb-4">
+                <button class="btn btn-outline-secondary btn-sm me-3" onclick="backToHomeworkOverview()">
+                    <i class="bi bi-arrow-left"></i> 返回
+                </button>
+                <h4 class="mb-0" id="hwDetailTitle">作业详情</h4>
+                <span class="badge bg-primary ms-3" id="hwDetailAvg">平均分: --</span>
+                <input type="hidden" id="currentTaskId" value="">
+                <button class="btn btn-primary btn-sm ms-auto" onclick="downloadAllSubmissions()" id="downloadAllBtn">
+                    <i class="bi bi-download"></i> 打包下载全部作业
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>学生</th>
+                            <th>班级</th>
+                            <th>得分</th>
+                            <th>等级</th>
+                            <th>提交时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hwDetailTable">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========== 学情分析 ========== -->
+        <div class="tab-pane fade" id="analysis" role="tabpanel">
+            <div id="analysisContent">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-3">正在加载学情分析数据...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 学生管理 ========== -->
+        <div class="tab-pane fade" id="students" role="tabpanel">
+            <!-- 统计卡片 -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3" style="border-radius: 12px;">
+                        <div class="d-flex align-items-center">
+                            <div class="feature-icon me-3" style="background: #ebf8ff; color: #2b6cb0; width: 48px; height: 48px; font-size: 1.2rem;">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">学生总数</div>
+                                <div class="fs-3 fw-bold" id="totalStudents">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3" style="border-radius: 12px;">
+                        <div class="d-flex align-items-center">
+                            <div class="feature-icon me-3" style="background: #f0fff4; color: #38a169; width: 48px; height: 48px; font-size: 1.2rem;">
+                                <i class="bi bi-building"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">班级数量</div>
+                                <div class="fs-3 fw-bold" id="totalClasses">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作栏 -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" id="studentSearch" placeholder="搜索姓名/学号/班级..." oninput="loadStudents()">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" id="classFilter" onchange="loadStudents()">
+                                <option value="">全部班级</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7 text-end">
+                            <button class="btn btn-primary btn-sm me-1" onclick="showAddStudentModal()">
+                                <i class="bi bi-plus-lg"></i> 添加学生
+                            </button>
+                            <button class="btn btn-outline-success btn-sm me-1" onclick="document.getElementById('importFile').click()">
+                                <i class="bi bi-upload"></i> 导入名单
+                            </button>
+                            <input type="file" id="importFile" accept=".csv,.xlsx,.xls" style="display:none" onchange="importStudents(this)">
+                            <button class="btn btn-outline-warning btn-sm me-1" onclick="syncAccounts()">
+                                <i class="bi bi-arrow-repeat"></i> 同步登录账号
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" id="batchDeleteBtn" style="display:none" onclick="batchDeleteStudents()">
+                                <i class="bi bi-trash"></i> 批量删除 (<span id="selectedCount">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 学生列表 -->
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" style="font-size: 0.9rem;">
+                            <thead style="background: #f7fafc;">
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this)"></th>
+                                    <th>学号</th>
+                                    <th>姓名</th>
+                                    <th>班级</th>
+                                    <th>添加时间</th>
+                                    <th style="width: 120px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody">
+                                <tr><td colspan="6" class="text-center text-muted py-4">正在加载...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 练习文档管理 ========== -->
+        <div class="tab-pane fade" id="practice" role="tabpanel">
+            <!-- 操作栏 -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-3">
+                            <select class="form-select form-select-sm" id="practiceTask">
+                                <option value="">选择任务...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" id="practiceLevel">
+                                <option value="excellent">优秀（拓展挑战）</option>
+                                <option value="good">良好（巩固提升）</option>
+                                <option value="pass">及格（基础强化）</option>
+                                <option value="fail">需努力（入门学习）</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7 text-end">
+                            <button class="btn btn-primary btn-sm" onclick="adminGeneratePractice()">
+                                <i class="bi bi-magic"></i> AI生成练习文档
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm ms-1" onclick="loadPracticeList()">
+                                <i class="bi bi-arrow-clockwise"></i> 刷新
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            选择任务和等级后，点击"AI生成练习文档"即可根据教材步骤自动生成分层练习文档（Word）和素材包（ZIP）
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 已生成列表 -->
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" style="font-size: 0.9rem;">
+                            <thead style="background: #f7fafc;">
+                                <tr>
+                                    <th>文件名</th>
+                                    <th>大小</th>
+                                    <th>生成时间</th>
+                                    <th style="width: 140px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="practiceTableBody">
+                                <tr><td colspan="4" class="text-center text-muted py-4">正在加载...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 系统设置 ========== -->
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <!-- AI接口配置 -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-transparent border-0 pt-3 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-robot me-2 text-primary"></i>AI接口配置</h5>
+                    <small class="text-muted">配置AI大模型接口，用于生成分层学习任务和个性化学习建议</small>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">API提供商</label>
+                        <select class="form-select" id="aiProvider" onchange="onProviderChange()">
+                            <option value="deepseek">DeepSeek（推荐）</option>
+                            <option value="zhipu">智谱AI（GLM）</option>
+                            <option value="moonshot">Moonshot（月之暗面）</option>
+                            <option value="qwen">通义千问（阿里云）</option>
+                            <option value="custom">自定义接口</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Key <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="aiApiKey" placeholder="请输入API Key">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleApiKeyVisibility()">
+                                <i class="bi bi-eye" id="apiKeyEyeIcon"></i>
+                            </button>
+                        </div>
+                        <div class="form-text" id="aiKeyStatus"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API地址</label>
+                        <input type="text" class="form-control" id="aiApiUrl" placeholder="https://api.deepseek.com/chat/completions">
+                        <div class="form-text">兼容OpenAI API格式的接口地址</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">模型名称</label>
+                        <input type="text" class="form-control" id="aiModel" placeholder="deepseek-chat">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" onclick="saveAiConfig()">
+                            <i class="bi bi-check-lg"></i> 保存配置
+                        </button>
+                        <button class="btn btn-outline-success" onclick="testAiConnection()">
+                            <i class="bi bi-lightning"></i> 测试连接
+                        </button>
+                    </div>
+                    <div id="aiTestResult" class="mt-3" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 教师管理 ========== -->
+        <div class="tab-pane fade" id="teachers" role="tabpanel">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="bi bi-person-badge"></i> 教师列表</h5>
+                        <button class="btn btn-primary btn-sm" onclick="showAddTeacherModal()">
+                            <i class="bi bi-plus-lg"></i> 添加教师
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>工号</th>
+                                    <th>姓名</th>
+                                    <th>角色</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teacherTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 教案生成 ========== -->
+        <div class="tab-pane fade" id="lessonplan" role="tabpanel">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5 class="mb-3"><i class="bi bi-journal-text"></i> 薄弱技能点教案生成</h5>
+                    <p class="text-muted mb-3">系统将分析所有学生的作业提交记录，找出错误率最高的技能点，然后AI自动生成针对性教案。</p>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">选择班级（可选）</label>
+                            <select class="form-select" id="lpClassFilter">
+                                <option value="">全部班级</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">选择任务（可选）</label>
+                            <select class="form-select" id="lpTaskFilter">
+                                <option value="">全部任务</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" id="genLessonBtn" onclick="generateLessonPlan()">
+                                <i class="bi bi-magic"></i> 分析并生成教案
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 薄弱技能点分析结果 -->
+                    <div id="weakPointsResult" class="d-none mb-4">
+                        <h6><i class="bi bi-exclamation-triangle text-warning"></i> 薄弱技能点分析</h6>
+                        <div id="weakPointsList" class="mb-3"></div>
+                    </div>
+                    
+                    <!-- 教案内容 -->
+                    <div id="lessonPlanResult" class="d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6><i class="bi bi-journal-check text-primary"></i> AI生成教案</h6>
+                            <button class="btn btn-outline-success btn-sm" onclick="downloadLessonPlan()">
+                                <i class="bi bi-download"></i> 下载教案
+                            </button>
+                        </div>
+                        <div id="lessonPlanContent" class="border rounded p-4" style="background:#fafafa;min-height:300px;white-space:pre-wrap;font-size:0.95rem;line-height:1.8;"></div>
+                    </div>
+                    
+                    <!-- 加载状态 -->
+                    <div id="lessonPlanLoading" class="text-center py-5 d-none">
+                        <div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div>
+                        <p class="text-muted mt-3">正在分析薄弱技能点并生成教案，请稍候...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- 学生编辑模态框 -->
+<div class="modal fade" id="studentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" id="studentModalTitle">添加学生</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="studentForm">
+                    <input type="hidden" id="studentIdInput">
+                    <div class="mb-3">
+                        <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="inputName" placeholder="请输入学生姓名" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">学号</label>
+                        <input type="text" class="form-control" id="inputStudentNo" placeholder="请输入学号">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">班级</label>
+                        <input type="text" class="form-control" id="inputClassName" placeholder="请输入班级（如：计科1班）">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveStudent()">
+                    <i class="bi bi-check-lg"></i> 保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 移动作业模态框 -->
+<div class="modal fade" id="moveSubmissionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">移动作业</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="moveSubmissionId">
+                <p>将 <strong id="moveStudentName"></strong> 的作业移动到:</p>
+                <div class="mb-3">
+                    <label class="form-label">目标作业任务</label>
+                    <select class="form-select" id="targetTaskSelect">
+                        <option value="">请选择目标作业...</option>
+                        <!-- 动态加载作业列表 -->
+                    </select>
+                </div>
+                <div class="alert alert-warning d-none" id="moveWarning">
+                    <i class="bi bi-exclamation-triangle"></i> <span id="moveWarningText"></span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="confirmMove()">
+                    <i class="bi bi-arrow-right-circle"></i> 确认移动
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadData() {
+    await Promise.all([loadStats(), loadSubmissions(), loadStudents(), loadPracticeList(), loadPracticeTasks(), loadAiConfig(), loadHomeworkOverview()]);
+    loadAnalysis();
+    loadTeachers();
+    initLessonPlanFilters();
+    // 只有管理员才显示系统设置和教师管理
+    fetch('/api/auth/check-role').then(r => r.json()).then(data => {
+        console.log('check-role response:', data);
+        if (!data.is_admin) {
+            console.log('Hiding settings tab (not admin)');
+            const settingsTab = document.getElementById('settings-tab');
+            if (settingsTab) settingsTab.style.display = 'none';
+            const settingsPane = document.getElementById('settings');
+            if (settingsPane) settingsPane.style.display = 'none';
+            const teachersTab = document.getElementById('teachers-tab');
+            if (teachersTab) teachersTab.style.display = 'none';
+            const teachersPane = document.getElementById('teachers');
+            if (teachersPane) teachersPane.style.display = 'none';
+        } else {
+            console.log('Showing settings tab (is admin)');
+        }
+    }).catch(err => {
+        console.error('check-role error:', err);
+    });
+}
+
+async function loadStats() {
+    try {
+        const resp = await fetch('/api/stats');
+        const data = await resp.json();
+        if (data.success) {
+            const s = data.stats;
+            document.getElementById('totalSubmissions').textContent = s.total_submissions;
+            document.getElementById('avgScore').textContent = s.average_score;
+
+            const total = s.total_submissions || 1;
+            const excellentPct = (s.level_distribution.excellent / total * 100).toFixed(0);
+            const failPct = (s.level_distribution.fail / total * 100).toFixed(0);
+            document.getElementById('excellentRate').textContent = excellentPct + '%';
+            document.getElementById('failRate').textContent = failPct + '%';
+
+            renderLevelDistribution(s.level_distribution, total);
+            renderTaskDistribution(s.task_distribution);
+        }
+    } catch(e) {
+        console.error('加载统计失败:', e);
+    }
+}
+
+async function showAttentionList() {
+    try {
+        const resp = await fetch('/api/submissions');
+        const data = await resp.json();
+        if (data.success) {
+            const failList = data.submissions.filter(s => {
+                const level = (s.score_result || {}).level || '';
+                return level === 'fail';
+            });
+            if (failList.length === 0) {
+                alert('暂无需关注的学生');
+                return;
+            }
+            // 构建列表HTML
+            let html = '<div style="max-height:400px;overflow-y:auto;">';
+            html += '<table class="table table-hover table-sm"><thead><tr><th>学生</th><th>班级</th><th>任务</th><th>得分</th><th>时间</th></tr></thead><tbody>';
+            failList.forEach(s => {
+                const r = s.score_result || {};
+                html += `<tr>
+                    <td>${s.student_name || '--'}</td>
+                    <td>${s.student_class || '--'}</td>
+                    <td>${r.task_name || '--'}</td>
+                    <td><strong style="color:#dc3545">${r.total_score || 0}</strong></td>
+                    <td>${(s.submitted_at || '').substring(0,16)}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            // 用模态框显示
+            document.getElementById('attentionModalBody').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('attentionModal')).show();
+        }
+    } catch(e) {
+        alert('加载失败: ' + e.message);
+    }
+}
+
+function renderLevelDistribution(dist, total) {
+    const levels = [
+        { key: 'excellent', name: '优秀', color: '#28a745' },
+        { key: 'good', name: '良好', color: '#17a2b8' },
+        { key: 'pass', name: '及格', color: '#ffc107' },
+        { key: 'fail', name: '需努力', color: '#dc3545' },
+    ];
+
+    document.getElementById('levelDistribution').innerHTML = levels.map(l => {
+        const count = dist[l.key] || 0;
+        const pct = total > 0 ? (count / total * 100) : 0;
+        return `
+            <div class="d-flex align-items-center mb-3">
+                <span class="me-3" style="width: 60px;">${l.name}</span>
+                <div class="flex-grow-1">
+                    <div class="progress" style="height: 24px;">
+                        <div class="progress-bar d-flex align-items-center justify-content-end pe-2"
+                             style="width: ${pct}%; background: ${l.color}; min-width: ${count > 0 ? '40px' : '0'}">
+                            <small class="text-white fw-bold">${count}</small>
+                        </div>
+                    </div>
+                </div>
+                <span class="ms-3 text-muted small">${pct.toFixed(0)}%</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderTaskDistribution(dist) {
+    const entries = Object.entries(dist);
+    if (!entries.length) {
+        document.getElementById('taskDistribution').innerHTML = '<p class="text-muted text-center">暂无数据</p>';
+        return;
+    }
+
+    const colors = ['#2b6cb0', '#38a169', '#dd6b20', '#805ad5'];
+    document.getElementById('taskDistribution').innerHTML = entries.map(([name, count], i) => `
+        <div class="d-flex align-items-center mb-3">
+            <span class="me-3 text-truncate" style="width: 200px;" title="${name}">${name}</span>
+            <div class="flex-grow-1">
+                <div class="progress" style="height: 24px;">
+                    <div class="progress-bar" style="width: 100%; background: ${colors[i % colors.length]}">
+                        <small class="text-white fw-bold">${count} 份</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function loadSubmissions() {
+    try {
+        const resp = await fetch('/api/submissions');
+        const data = await resp.json();
+        if (data.success) {
+            renderSubmissions(data.submissions);
+        }
+    } catch(e) {
+        console.error('加载提交记录失败:', e);
+    }
+}
+
+function renderSubmissions(submissions) {
+    const table = document.getElementById('submissionTable');
+    const empty = document.getElementById('emptyState');
+
+    if (!submissions.length) {
+        table.innerHTML = '';
+        empty.classList.remove('d-none');
+        return;
+    }
+
+    empty.classList.add('d-none');
+    const levelColors = {
+        'excellent': '#28a745', 'good': '#17a2b8',
+        'pass': '#ffc107', 'fail': '#dc3545'
+    };
+    const levelNames = {
+        'excellent': '优秀', 'good': '良好', 'pass': '及格', 'fail': '需努力'
+    };
+
+    table.innerHTML = submissions.map(s => {
+        const r = s.score_result || {};
+        const level = r.level || 'fail';
+        const color = levelColors[level] || '#6c757d';
+        return `
+            <tr>
+                <td><code>${s.submission_id}</code></td>
+                <td>${s.student_name || '--'}</td>
+                <td>${s.student_class || '--'}</td>
+                <td>${r.task_name || '--'}</td>
+                <td><strong>${r.total_score || 0}/${r.max_score || 100}</strong></td>
+                <td><span class="badge" style="background: ${color}20; color: ${color}">${levelNames[level] || '--'}</span></td>
+                <td>${s.submitted_at || '--'}</td>
+                <td>
+                    <a href="/result/${s.submission_id}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i> 查看
+                    </a>
+                    <button class="btn btn-sm btn-outline-warning ms-1" onclick="openMoveModal('${s.submission_id}', '${s.student_name || '--'}')">
+                        <i class="bi bi-arrow-left-right"></i> 移动
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ========== 清空提交记录 ==========
+async function clearAllSubmissions() {
+    if (!confirm('确定要清空所有提交记录吗？此操作不可恢复！')) return;
+    if (!confirm('再次确认：将删除所有学生的作业提交记录和评分结果，确定继续？')) return;
+
+    try {
+        const resp = await fetch('/api/submissions/clear', { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            alert('已清空所有提交记录');
+            loadSubmissions();
+        } else {
+            alert('清空失败：' + data.message);
+        }
+    } catch(e) {
+        alert('操作失败：' + e.message);
+    }
+}
+
+// ========== 移动作业 ==========
+let allTasks = []; // 缓存所有任务列表
+
+async function loadTasks() {
+    // 加载所有任务列表
+    try {
+        const resp = await fetch('/api/tasks/list');
+        const data = await resp.json();
+        if (data.success) {
+            allTasks = data.tasks;
+        }
+    } catch(e) {
+        console.error('加载任务列表失败:', e);
+    }
+}
+
+async function openMoveModal(submissionId, studentName) {
+    // 打开移动作业模态框
+    document.getElementById('moveSubmissionId').value = submissionId;
+    document.getElementById('moveStudentName').textContent = studentName;
+
+    // 确保任务列表已加载
+    if (allTasks.length === 0) {
+        await loadTasks();
+    }
+
+    // 填充目标作业选择框
+    const select = document.getElementById('targetTaskSelect');
+    select.innerHTML = '<option value="">请选择目标作业...</option>';
+
+    // 按模块分组显示任务
+    const groupedTasks = {};
+    allTasks.forEach(task => {
+        if (!groupedTasks[task.module]) {
+            groupedTasks[task.module] = [];
+        }
+        groupedTasks[task.module].push(task);
+    });
+
+    for (const [module, tasks] of Object.entries(groupedTasks)) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = module;
+        tasks.forEach(task => {
+            const option = document.createElement('option');
+            option.value = task.task_id;
+            option.textContent = `${task.task_name} (${task.file_type.toUpperCase()})`;
+            optgroup.appendChild(option);
+        });
+        select.appendChild(optgroup);
+    }
+
+    // 隐藏警告信息
+    document.getElementById('moveWarning').classList.add('d-none');
+
+    // 显示模态框
+    new bootstrap.Modal(document.getElementById('moveSubmissionModal')).show();
+}
+
+async function confirmMove() {
+    // 确认移动作业
+    const submissionId = document.getElementById('moveSubmissionId').value;
+    const targetTaskId = document.getElementById('targetTaskSelect').value;
+    const studentName = document.getElementById('moveStudentName').textContent;
+
+    if (!targetTaskId) {
+        alert('请选择目标作业任务');
+        return;
+    }
+
+    if (!confirm(`确定要将 ${studentName} 的作业移动到选定的任务吗？\n\n注意：移动后将根据新任务重新评分。`)) {
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/submission/${submissionId}/move`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_task_id: targetTaskId })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            // 关闭模态框
+            bootstrap.Modal.getInstance(document.getElementById('moveSubmissionModal')).hide();
+            alert(`移动成功！\n新评分：${data.data.new_score}分，等级：${data.data.new_level}`);
+            // 刷新提交列表
+            loadSubmissions();
+            // 刷新统计数据
+            loadStats();
+        } else {
+            // 显示错误信息
+            const warningDiv = document.getElementById('moveWarning');
+            const warningText = document.getElementById('moveWarningText');
+            warningText.textContent = data.message;
+            warningDiv.classList.remove('d-none');
+        }
+    } catch(e) {
+        alert('移动失败：' + e.message);
+    }
+}
+
+// ========== 学情分析 ==========
+async function loadAnalysis() {
+    try {
+        const resp = await fetch('/api/analysis');
+        const data = await resp.json();
+        if (data.success) {
+            renderAnalysis(data.analysis);
+        }
+    } catch(e) {
+        console.error('加载学情分析失败:', e);
+        document.getElementById('analysisContent').innerHTML = '<div class="alert alert-danger">加载学情分析数据失败</div>';
+    }
+}
+
+function renderAnalysis(a) {
+    const container = document.getElementById('analysisContent');
+
+    // 检查是否有数据
+    const hasData = a.task_avg_scores.length > 0;
+    if (!hasData) {
+        container.innerHTML = '<div class="text-center py-5"><i class="bi bi-inbox fs-1 text-muted"></i><p class="text-muted mt-3">暂无足够数据进行学情分析</p></div>';
+        return;
+    }
+
+    let html = '';
+
+    // ---- a) 各任务平均分对比柱状图 ----
+    html += `
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5><i class="bi bi-bar-chart-steps me-2"></i>各任务平均分对比</h5>
+                    <div id="avgScoreChart">
+                        ${renderAvgScoreChart(a.task_avg_scores)}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    // ---- b) 各任务通过率统计 ----
+    html += `
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5><i class="bi bi-check-circle me-2"></i>各任务通过率统计</h5>
+                    <div id="passRateChart">
+                        ${renderPassRateChart(a.task_pass_rates)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    // ---- c) 薄弱技能点排行 ----
+    html += `
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5><i class="bi bi-exclamation-triangle me-2 text-warning"></i>薄弱技能点排行 (得分率最低5项)</h5>
+                    <div id="weakSkillsList">
+                        ${renderWeakSkills(a.weak_skills)}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    // ---- d) 学生成绩分布直方图 ----
+    html += `
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5><i class="bi bi-bar-chart-line me-2"></i>学生成绩分布</h5>
+                    <div id="scoreDistChart">
+                        ${renderScoreDistribution(a.score_distribution)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    // ---- e) 分层教学建议 ----
+    html += `
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+        <div class="card-body p-4">
+            <h5><i class="bi bi-lightbulb me-2 text-primary"></i>分层教学建议</h5>
+            <div id="teachingSuggestions">
+                ${renderTeachingSuggestions(a.teaching_suggestions)}
+            </div>
+        </div>
+    </div>`;
+
+    container.innerHTML = html;
+}
+
+// CSS柱状图：各任务平均分
+function renderAvgScoreChart(tasks) {
+    if (!tasks.length) return '<p class="text-muted text-center">暂无数据</p>';
+    const maxScore = Math.max(...tasks.map(t => t.max_score), 100);
+    const colors = ['#2b6cb0', '#38a169', '#dd6b20', '#805ad5', '#e53e3e', '#d69e2e', '#319795', '#b83280', '#718096', '#2b5797', '#217346'];
+
+    return tasks.map((t, i) => {
+        const pct = (t.avg_score / maxScore * 100).toFixed(1);
+        const color = colors[i % colors.length];
+        // 截断过长的任务名
+        const shortName = t.task_name.length > 12 ? t.task_name.substring(0, 12) + '...' : t.task_name;
+        return `
+        <div class="d-flex align-items-center mb-3">
+            <span class="me-3 text-truncate" style="width: 140px; font-size: 0.85rem;" title="${t.task_name}">${shortName}</span>
+            <div class="flex-grow-1 position-relative" style="height: 28px; background: #f7fafc; border-radius: 6px;">
+                <div class="h-100 d-flex align-items-center justify-content-end pe-2"
+                     style="width: ${pct}%; background: ${color}; border-radius: 6px; min-width: 50px; transition: width 0.6s ease;">
+                    <small class="text-white fw-bold">${t.avg_score}分</small>
+                </div>
+            </div>
+            <span class="ms-2 text-muted small" style="width: 60px;">${t.count}人</span>
+        </div>`;
+    }).join('');
+}
+
+// 各任务通过率
+function renderPassRateChart(tasks) {
+    if (!tasks.length) return '<p class="text-muted text-center">暂无数据</p>';
+    const colors = ['#28a745', '#17a2b8', '#ffc107', '#dc3545'];
+
+    return tasks.map((t, i) => {
+        const color = t.pass_rate >= 80 ? '#28a745' : t.pass_rate >= 60 ? '#ffc107' : '#dc3545';
+        const shortName = t.task_name.length > 12 ? t.task_name.substring(0, 12) + '...' : t.task_name;
+        return `
+        <div class="d-flex align-items-center mb-3">
+            <span class="me-3 text-truncate" style="width: 140px; font-size: 0.85rem;" title="${t.task_name}">${shortName}</span>
+            <div class="flex-grow-1">
+                <div class="progress" style="height: 28px; border-radius: 6px;">
+                    <div class="progress-bar d-flex align-items-center justify-content-end pe-2"
+                         style="width: ${t.pass_rate}%; background: ${color}; min-width: 50px; border-radius: 6px;">
+                        <small class="text-white fw-bold">${t.pass_rate}%</small>
+                    </div>
+                </div>
+            </div>
+            <span class="ms-2 text-muted small" style="width: 70px;">${t.passed}/${t.total}</span>
+        </div>`;
+    }).join('');
+}
+
+// 薄弱技能点排行
+function renderWeakSkills(skills) {
+    if (!skills.length) return '<p class="text-muted text-center">暂无数据</p>';
+
+    const levelColors = ['#dc3545', '#e53e3e', '#dd6b20', '#d69e2e', '#ffc107'];
+    const levelIcons = ['bi-1-circle-fill', 'bi-2-circle-fill', 'bi-3-circle-fill', 'bi-4-circle-fill', 'bi-5-circle-fill'];
+
+    return skills.map((s, i) => {
+        const color = levelColors[i] || '#6c757d';
+        return `
+        <div class="d-flex align-items-center mb-3 p-2 rounded-2" style="background: ${color}08;">
+            <div class="me-3" style="width: 28px; text-align: center;">
+                <i class="bi ${levelIcons[i]}" style="color: ${color}; font-size: 1.2rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="fw-bold" style="font-size: 0.9rem;">${s.item_name}</div>
+                <small class="text-muted">通过 ${s.pass_count}人 / 未通过 ${s.fail_count}人 | ${s.count}次提交</small>
+            </div>
+            <div class="text-end">
+                <div class="fw-bold" style="color: ${color}; font-size: 1.1rem;">${s.rate}%</div>
+                <small class="text-muted">通过率</small>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// 学生成绩分布直方图（CSS实现）
+function renderScoreDistribution(bins) {
+    if (!bins.length) return '<p class="text-muted text-center">暂无数据</p>';
+    const maxCount = Math.max(...bins.map(b => b.count), 1);
+    const colors = ['#e53e3e', '#dd6b20', '#d69e2e', '#ffc107', '#38a169', '#28a745', '#2b6cb0'];
+
+    let html = '<div style="display: flex; align-items: flex-end; height: 200px; gap: 8px; padding: 0 10px;">';
+    bins.forEach((b, i) => {
+        const heightPct = maxCount > 0 ? (b.count / maxCount * 100) : 0;
+        const color = colors[i] || '#6c757d';
+        html += `
+        <div class="flex-grow-1 text-center" style="display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end;">
+            <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; color: ${color};">${b.count > 0 ? b.count : ''}</div>
+            <div style="width: 100%; height: ${Math.max(heightPct, 3)}%; background: ${color}; border-radius: 4px 4px 0 0; transition: height 0.6s ease; min-height: 3px;"></div>
+            <div style="font-size: 0.7rem; margin-top: 6px; color: #6c757d; white-space: nowrap;">${b.label}</div>
+        </div>`;
+    });
+    html += '</div>';
+    return html;
+}
+
+// 分层教学建议
+function renderTeachingSuggestions(suggestions) {
+    if (!suggestions.length) return '<p class="text-muted text-center">暂无建议</p>';
+
+    const levelConfig = {
+        'urgent': { icon: 'bi-exclamation-octagon', color: '#dc3545', bg: '#fff5f5', label: '紧急' },
+        'warning': { icon: 'bi-exclamation-triangle', color: '#dd6b20', bg: '#fffaf0', label: '关注' },
+        'good': { icon: 'bi-check-circle', color: '#28a745', bg: '#f0fff4', label: '良好' },
+        'info': { icon: 'bi-info-circle', color: '#2b6cb0', bg: '#ebf8ff', label: '建议' },
+    };
+
+    return suggestions.map(s => {
+        const cfg = levelConfig[s.level] || levelConfig['info'];
+        return `
+        <div class="d-flex mb-3 p-3 rounded-3" style="background: ${cfg.bg}; border-left: 4px solid ${cfg.color};">
+            <div class="me-3 mt-1">
+                <i class="bi ${cfg.icon}" style="color: ${cfg.color}; font-size: 1.3rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center mb-1">
+                    <strong style="color: ${cfg.color};">${s.title}</strong>
+                    <span class="badge ms-2" style="background: ${cfg.color}20; color: ${cfg.color};">${cfg.label}</span>
+                </div>
+                <p class="text-muted small mb-0">${s.content}</p>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ========== 学生管理 ==========
+let selectedStudentIds = new Set();
+
+async function loadStudents() {
+    try {
+        const keyword = document.getElementById('studentSearch').value.trim();
+        const classFilter = document.getElementById('classFilter').value;
+        const params = new URLSearchParams();
+        if (keyword) params.set('keyword', keyword);
+        if (classFilter) params.set('class_name', classFilter);
+
+        const resp = await fetch(`/api/students?${params.toString()}`);
+        const data = await resp.json();
+        if (data.success) {
+            renderStudentTable(data.students);
+            renderStudentStats(data.stats);
+            updateClassFilter(data.stats.classes || []);
+        }
+    } catch(e) {
+        console.error('加载学生列表失败:', e);
+    }
+}
+
+function renderStudentStats(stats) {
+    document.getElementById('totalStudents').textContent = stats.total || 0;
+    document.getElementById('totalClasses').textContent = stats.class_count || 0;
+}
+
+function updateClassFilter(classes) {
+    const select = document.getElementById('classFilter');
+    const current = select.value;
+    // 保留第一个"全部班级"选项
+    select.innerHTML = '<option value="">全部班级</option>';
+    classes.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        if (c === current) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+function renderStudentTable(students) {
+    const tbody = document.getElementById('studentTableBody');
+    if (!students.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4"></i><br>暂无学生数据</td></tr>';
+        return;
+    }
+    tbody.innerHTML = students.map(s => `
+        <tr>
+            <td><input type="checkbox" class="form-check-input student-check" value="${s.id}" onchange="updateSelection()"></td>
+            <td><code>${s.student_no || '--'}</code></td>
+            <td><strong>${s.name}</strong></td>
+            <td><span class="badge bg-light text-dark">${s.class_name || '--'}</span></td>
+            <td class="text-muted small">${s.created_at || '--'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary me-1" onclick='showEditStudentModal(${JSON.stringify(s)})'>
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteStudent('${s.id}', '${s.name}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function toggleSelectAll(checkbox) {
+    const checks = document.querySelectorAll('.student-check');
+    checks.forEach(c => c.checked = checkbox.checked);
+    updateSelection();
+}
+
+function updateSelection() {
+    selectedStudentIds.clear();
+    document.querySelectorAll('.student-check:checked').forEach(c => {
+        selectedStudentIds.add(c.value);
+    });
+    const btn = document.getElementById('batchDeleteBtn');
+    const count = document.getElementById('selectedCount');
+    if (selectedStudentIds.size > 0) {
+        btn.style.display = 'inline-block';
+        count.textContent = selectedStudentIds.size;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function showAddStudentModal() {
+    document.getElementById('studentModalTitle').textContent = '添加学生';
+    document.getElementById('studentForm').reset();
+    document.getElementById('studentIdInput').value = '';
+    new bootstrap.Modal(document.getElementById('studentModal')).show();
+}
+
+function showEditStudentModal(student) {
+    document.getElementById('studentModalTitle').textContent = '编辑学生';
+    document.getElementById('studentIdInput').value = student.id;
+    document.getElementById('inputName').value = student.name || '';
+    document.getElementById('inputStudentNo').value = student.student_no || '';
+    document.getElementById('inputClassName').value = student.class_name || '';
+    new bootstrap.Modal(document.getElementById('studentModal')).show();
+}
+
+async function saveStudent() {
+    const id = document.getElementById('studentIdInput').value;
+    const name = document.getElementById('inputName').value.trim();
+    const student_no = document.getElementById('inputStudentNo').value.trim();
+    const class_name = document.getElementById('inputClassName').value.trim();
+
+    if (!name) {
+        alert('请输入学生姓名');
+        return;
+    }
+
+    try {
+        let resp;
+        if (id) {
+            resp = await fetch(`/api/students/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, student_no, class_name})
+            });
+        } else {
+            resp = await fetch('/api/students', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, student_no, class_name})
+            });
+        }
+        const data = await resp.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
+            loadStudents();
+            showToast(data.message, 'success');
+        } else {
+            alert(data.message || '操作失败');
+        }
+    } catch(e) {
+        alert('请求失败: ' + e.message);
+    }
+}
+
+async function syncAccounts() {
+    if (!confirm('将为所有已导入的学生创建登录账号（用户名=学号，密码=学号后6位），已有账号的跳过。确定继续？')) return;
+    try {
+        const resp = await fetch('/api/students/sync-accounts', {method: 'POST'});
+        const data = await resp.json();
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert('同步失败: ' + data.message);
+        }
+    } catch(e) {
+        alert('操作失败: ' + e.message);
+    }
+}
+
+async function deleteStudent(id, name) {
+    if (!confirm(`确定要删除学生 "${name}" 吗？`)) return;
+    try {
+        const resp = await fetch(`/api/students/${id}`, {method: 'DELETE'});
+        const data = await resp.json();
+        if (data.success) {
+            loadStudents();
+            showToast(data.message, 'success');
+        } else {
+            alert(data.message);
+        }
+    } catch(e) {
+        alert('删除失败: ' + e.message);
+    }
+}
+
+async function downloadPracticeFile(el) {
+    const filename = el.getAttribute('data-filename');
+    try {
+        const resp = await fetch('/api/admin/practice/download', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({filename: filename})
+        });
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            alert('下载失败: ' + (errData.message || 'HTTP ' + resp.status));
+            return;
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch(e) {
+        alert('下载失败: ' + e.message);
+    }
+}
+
+async function batchDeleteStudents() {
+    if (!confirm(`确定要删除选中的 ${selectedStudentIds.size} 名学生吗？`)) return;
+    try {
+        const resp = await fetch('/api/students/batch-delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ids: Array.from(selectedStudentIds)})
+        });
+        const data = await resp.json();
+        if (data.success) {
+            selectedStudentIds.clear();
+            document.getElementById('selectAll').checked = false;
+            loadStudents();
+            showToast(data.message, 'success');
+        } else {
+            alert(data.message);
+        }
+    } catch(e) {
+        alert('批量删除失败: ' + e.message);
+    }
+}
+
+async function importStudents(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['csv', 'xlsx', 'xls'].includes(ext)) {
+        alert('仅支持 CSV 和 Excel 文件');
+        input.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const resp = await fetch('/api/students/import', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await resp.json();
+        if (data.success) {
+            loadStudents();
+            showToast(data.message, 'success');
+        } else {
+            const detail = data.detail || {};
+            let msg = data.message || '导入失败';
+            if (detail.errors && detail.errors.length) {
+                msg += '\n错误详情：\n' + detail.errors.join('\n');
+            }
+            alert(msg);
+        }
+    } catch(e) {
+        alert('导入失败: ' + e.message);
+    }
+    input.value = '';
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// ========== 练习文档管理 ==========
+async function loadPracticeTasks() {
+    try {
+        const resp = await fetch('/api/tasks/list');
+        const data = await resp.json();
+        if (data.success) {
+            const select = document.getElementById('practiceTask');
+            select.innerHTML = '<option value="">选择任务...</option>';
+            data.tasks.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.task_id;
+                opt.textContent = `${t.module} - ${t.task_name}`;
+                select.appendChild(opt);
+            });
+        }
+    } catch(e) { console.error('加载任务列表失败:', e); }
+}
+
+async function loadPracticeList() {
+    try {
+        const resp = await fetch('/api/admin/practice/list');
+        const data = await resp.json();
+        if (data.success) {
+            renderPracticeTable(data.packages);
+        }
+    } catch(e) { console.error('加载练习文档列表失败:', e); }
+}
+
+function renderPracticeTable(packages) {
+    const tbody = document.getElementById('practiceTableBody');
+    if (!packages.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4"></i><br>暂无已生成的练习文档</td></tr>';
+        return;
+    }
+    tbody.innerHTML = packages.map(p => `
+        <tr>
+            <td><i class="bi bi-file-earmark-zip me-1 text-success"></i>${p.filename}</td>
+            <td class="text-muted">${p.size_str}</td>
+            <td class="text-muted small">${p.created_at}</td>
+            <td>
+                <a href="javascript:void(0)" onclick="downloadPracticeFile(this)" data-filename="${p.filename}" class="btn btn-sm btn-outline-primary me-1">
+                    <i class="bi bi-download"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-danger" onclick="deletePractice('${p.filename}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function adminGeneratePractice() {
+    const task_id = document.getElementById('practiceTask').value;
+    const level = document.getElementById('practiceLevel').value;
+
+    if (!task_id) {
+        alert('请选择任务');
+        return;
+    }
+
+    const btn = event.target.closest('button');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> AI生成中，请耐心等待（1-2分钟）...';
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5分钟超时
+        const resp = await fetch('/api/admin/practice/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({task_id, level}),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const data = await resp.json();
+        if (data.success) {
+            loadPracticeList();
+            showToast(data.message, 'success');
+        } else {
+            alert(data.message);
+        }
+    } catch(e) {
+        alert('生成失败: ' + e.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-magic"></i> AI生成练习文档';
+}
+
+async function deletePractice(filename) {
+    if (!confirm('确定要删除该练习文档吗？')) return;
+    try {
+        const resp = await fetch('/api/admin/practice/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({filename})
+        });
+        const data = await resp.json();
+        if (data.success) {
+            loadPracticeList();
+            showToast(data.message, 'success');
+        } else {
+            alert(data.message);
+        }
+    } catch(e) {
+        alert('删除失败: ' + e.message);
+    }
+}
+
+// ========== 系统设置 ==========
+const AI_PROVIDERS = {
+    deepseek: { url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat' },
+    zhipu: { url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: 'glm-4-flash' },
+    moonshot: { url: 'https://api.moonshot.cn/v1/chat/completions', model: 'moonshot-v1-8k' },
+    qwen: { url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: 'qwen-turbo' },
+    custom: { url: '', model: '' }
+};
+
+async function loadAiConfig() {
+    try {
+        const resp = await fetch('/api/admin/config/ai');
+        const data = await resp.json();
+        if (data.success) {
+            const cfg = data.config;
+            document.getElementById('aiApiKey').value = cfg.api_key_set ? cfg.api_key : '';
+            document.getElementById('aiApiUrl').value = cfg.api_url;
+            document.getElementById('aiModel').value = cfg.model;
+            document.getElementById('aiKeyStatus').innerHTML = cfg.api_key_set
+                ? '<i class="bi bi-check-circle text-success"></i> API Key 已配置'
+                : '<i class="bi bi-exclamation-circle text-warning"></i> API Key 未配置，AI功能将使用模拟数据';
+        }
+    } catch(e) { console.error('加载AI配置失败:', e); }
+}
+
+function onProviderChange() {
+    const provider = document.getElementById('aiProvider').value;
+    const preset = AI_PROVIDERS[provider];
+    if (preset && preset.url) {
+        document.getElementById('aiApiUrl').value = preset.url;
+        document.getElementById('aiModel').value = preset.model;
+    }
+}
+
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('aiApiKey');
+    const icon = document.getElementById('apiKeyEyeIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+async function saveAiConfig() {
+    const api_key = document.getElementById('aiApiKey').value.trim();
+    const api_url = document.getElementById('aiApiUrl').value.trim();
+    const model = document.getElementById('aiModel').value.trim();
+
+    if (!api_key) {
+        alert('请输入API Key');
+        return;
+    }
+
+    const btn = event.target.closest('button');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 保存中...';
+
+    try {
+        const resp = await fetch('/api/admin/config/ai', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({api_key, api_url, model})
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showToast('配置已保存', 'success');
+            if (data.test_result) {
+                showTestResult(data.test_result);
+            }
+            loadAiConfig();
+        } else {
+            alert(data.message);
+        }
+    } catch(e) {
+        alert('保存失败: ' + e.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-lg"></i> 保存配置';
+}
+
+async function testAiConnection() {
+    const resultDiv = document.getElementById('aiTestResult');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 正在测试连接...</div>';
+
+    try {
+        const resp = await fetch('/api/admin/config/ai/test', { method: 'POST' });
+        const data = await resp.json();
+        showTestResult(data);
+    } catch(e) {
+        showTestResult({success: false, message: '网络错误: ' + e.message});
+    }
+}
+
+function showTestResult(result) {
+    const resultDiv = document.getElementById('aiTestResult');
+    resultDiv.style.display = 'block';
+    if (result.success) {
+        resultDiv.innerHTML = `<div class="alert alert-success"><i class="bi bi-check-circle"></i> ${result.message}</div>`;
+    } else {
+        resultDiv.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle"></i> ${result.message}</div>`;
+    }
+}
+
+// ========== 作业管理 ==========
+let hwAllTasks = [];
+let hwCurrentClass = '';
+
+async function loadHomeworkOverview() {
+    hwCurrentClass = document.getElementById('hwClassFilter').value;
+    try {
+        const params = new URLSearchParams();
+        if (hwCurrentClass) params.set('class_name', hwCurrentClass);
+        const resp = await fetch(`/api/homework-management/overview?${params.toString()}`);
+        const data = await resp.json();
+        if (data.success) {
+            hwAllTasks = data.tasks;
+            document.getElementById('hwStudentCount').textContent = data.total_students;
+            renderHomeworkCards(data.tasks);
+            updateHwClassFilter(data.classes);
+        }
+    } catch(e) {
+        console.error('加载作业管理失败:', e);
+    }
+}
+
+function updateHwClassFilter(classes) {
+    const select = document.getElementById('hwClassFilter');
+    const current = select.value;
+    select.innerHTML = '<option value="">全部班级</option>';
+    classes.forEach(c => {
+        select.innerHTML += `<option value="${c}" ${c === current ? 'selected' : ''}>${c}</option>`;
+    });
+}
+
+async function recalculateAllScores() {
+    if (!confirm('确定要重新计算所有学生的成绩吗？这将根据最新的评分规则重新评分。')) return;
+
+    const btn = document.querySelector('button[onclick="recalculateAllScores()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 计算中...';
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch('/api/homework-management/recalculate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert(`重新计算完成！\n共处理 ${data.details.total} 份作业\n成功: ${data.details.success}\n失败: ${data.details.failed}`);
+            loadHomeworkOverview(); // 刷新页面
+        } else {
+            alert('重新计算失败：' + data.message);
+        }
+    } catch(e) {
+        alert('操作失败：' + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function recalculateTaskScores(taskId) {
+    if (!confirm(`确定要重新计算该任务的所有成绩吗？`)) return;
+
+    try {
+        const resp = await fetch('/api/homework-management/recalculate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({task_id: taskId})
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert(`重新计算完成！\n共处理 ${data.details.total} 份作业\n成功: ${data.details.success}\n失败: ${data.details.failed}`);
+            loadHomeworkOverview(); // 刷新页面
+        } else {
+            alert('重新计算失败：' + data.message);
+        }
+    } catch(e) {
+        alert('操作失败：' + e.message);
+    }
+}
+
+// 重新计算当前作业的成绩
+async function recalculateCurrentTask() {
+    const taskId = document.getElementById('currentTaskId').value;
+    if (!taskId) {
+        alert('未找到当前作业ID');
+        return;
+    }
+    
+    if (!confirm('确定要重新计算本作业的所有学生成绩吗？这将根据最新的评分规则重新评分。')) return;
+
+    const btn = document.getElementById('recalcBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 计算中...';
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch('/api/homework-management/recalculate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({task_id: taskId})
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert(`重新计算完成！\n共处理 ${data.details.total} 份作业\n成功: ${data.details.success}\n失败: ${data.details.failed}`);
+            showHomeworkDetail(taskId); // 刷新当前作业详情
+        } else {
+            alert('重新计算失败：' + data.message);
+        }
+    } catch(e) {
+        alert('操作失败：' + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+function renderHomeworkCards(tasks) {
+    const container = document.getElementById('homeworkCards');
+    const empty = document.getElementById('homeworkEmpty');
+    
+    if (!tasks.length) {
+        container.innerHTML = '';
+        empty.classList.remove('d-none');
+        return;
+    }
+    empty.classList.add('d-none');
+    
+    const typeColors = {xlsx: '#28a745', docx: '#2b6cb0', pptx: '#d69e2e'};
+    const typeIcons = {xlsx: 'bi-file-earmark-excel', docx: 'bi-file-earmark-word', pptx: 'bi-file-earmark-ppt'};
+    
+    container.innerHTML = tasks.map(t => {
+        const color = typeColors[t.file_type] || '#6c757d';
+        const icon = typeIcons[t.file_type] || 'bi-file-earmark';
+        const scoreColor = t.avg_score >= 80 ? '#28a745' : t.avg_score >= 60 ? '#ffc107' : '#dc3545';
+
+        // 生成班级统计HTML
+        let classStatsHtml = '';
+        if (t.class_stats && t.class_stats.length > 0) {
+            classStatsHtml = '<div class="mt-3 border-top pt-2">';
+            t.class_stats.forEach(cs => {
+                const submitPct = cs.total > 0 ? Math.round(cs.submitted / cs.total * 100) : 0;
+                const submitColor = submitPct >= 80 ? '#28a745' : submitPct >= 50 ? '#ffc107' : '#dc3545';
+                classStatsHtml += `
+                    <div class="d-flex justify-content-between align-items-center small mb-1" onclick="event.stopPropagation();showClassDetail('${t.task_id}', '${cs.class_name}', '${cs.submitted_students.join(',')}', '${cs.not_submitted_students.join(',')}')" style="cursor:pointer;">
+                        <span>${cs.class_name}</span>
+                        <span class="badge" style="background:${submitColor}20;color:${submitColor}">
+                            ${cs.submitted} 已交 / ${cs.not_submitted} 待交
+                        </span>
+                    </div>`;
+            });
+            classStatsHtml += '</div>';
+        }
+
+        return `
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:12px;cursor:pointer;transition:all 0.2s;" 
+                     onclick="showHomeworkDetail('${t.task_id}')" 
+                     onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 25px rgba(0,0,0,0.1)'" 
+                     onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="me-3" style="background:${color}15;color:${color};width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                                <i class="bi ${icon}"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">${t.task_name}</div>
+                                <small class="text-muted">${t.module}</small>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fs-2 fw-bold" style="color:${scoreColor}">${t.avg_score}</span>
+                            <small class="text-muted">平均分</small>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span><i class="bi bi-check-circle text-success"></i> ${t.submitted_count} 已交</span>
+                        </div>
+                        ${classStatsHtml}
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// 显示班级详细已交/待交名单
+function showClassDetail(taskId, className, submittedStr, notSubmittedStr) {
+    const submitted = submittedStr ? submittedStr.split(',').filter(n => n) : [];
+    const notSubmitted = notSubmittedStr ? notSubmittedStr.split(',').filter(n => n) : [];
+
+    let html = `<div class="mb-3">
+        <h6><i class="bi bi-building me-1"></i>${className}</h6>
+        <div class="row">
+            <div class="col-6">
+                <div class="p-2 bg-success bg-opacity-10 rounded mb-2">
+                    <div class="fw-bold text-success mb-2"><i class="bi bi-check-circle me-1"></i>已交 (${submitted.length})</div>
+                    ${submitted.length > 0 ? submitted.map(n => `<span class="badge bg-success me-1 mb-1">${n}</span>`).join('') : '<span class="text-muted small">暂无</span>'}
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-2 bg-danger bg-opacity-10 rounded mb-2">
+                    <div class="fw-bold text-danger mb-2"><i class="bi bi-clock me-1"></i>待交 (${notSubmitted.length})</div>
+                    ${notSubmitted.length > 0 ? notSubmitted.map(n => `<span class="badge bg-danger me-1 mb-1">${n}</span>`).join('') : '<span class="text-muted small">暂无</span>'}
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    document.getElementById('classDetailModalBody').innerHTML = html;
+    document.getElementById('classDetailModalLabel').textContent = `班级详情 - ${className}`;
+    new bootstrap.Modal(document.getElementById('classDetailModal')).show();
+}
+
+async function showHomeworkDetail(taskId) {
+    try {
+        // 保存当前task_id
+        document.getElementById('currentTaskId').value = taskId;
+        
+        const params = new URLSearchParams();
+        params.set('task_id', taskId);
+        if (hwCurrentClass) params.set('class_name', hwCurrentClass);
+        const resp = await fetch(`/api/homework-management/detail?${params.toString()}`);
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('hwDetailTitle').textContent = data.task_name;
+            document.getElementById('hwDetailAvg').textContent = `平均分: ${data.avg_score}`;
+            
+            const levelColors = {excellent:'#28a745',good:'#17a2b8',pass:'#ffc107',fail:'#dc3545'};
+            const levelNames = {excellent:'优秀',good:'良好',pass:'及格',fail:'需努力'};
+            
+            document.getElementById('hwDetailTable').innerHTML = data.submissions.map(s => {
+                const r = s.score_result || {};
+                const level = r.level || 'fail';
+                const color = levelColors[level] || '#6c757d';
+                return `<tr>
+                    <td>${s.student_name || '--'}</td>
+                    <td>${s.student_class || '--'}</td>
+                    <td><strong>${r.total_score || 0}/${r.max_score || 100}</strong></td>
+                    <td><span class="badge" style="background:${color}20;color:${color}">${levelNames[level]||'--'}</span></td>
+                    <td>${s.submitted_at || '--'}</td>
+                    <td>
+                        <a href="/result/${s.submission_id}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-eye"></i> 查看</a>
+                        <a href="/api/homework-management/download/${s.submission_id}" class="btn btn-sm btn-outline-success me-1"><i class="bi bi-download"></i> 下载</a>
+                        <button class="btn btn-sm btn-outline-warning" onclick="openMoveModal('${s.submission_id}', '${s.student_name || '--'}')"><i class="bi bi-arrow-left-right"></i> 移动</button>
+                    </td>
+                </tr>`;
+            }).join('');
+            
+            // 切换到详情面板
+            const overviewTab = document.querySelector('[data-bs-target="#homework"]');
+            const detailPane = document.getElementById('homeworkDetail');
+            const overviewPane = document.getElementById('homework');
+            overviewPane.classList.remove('show','active');
+            detailPane.classList.add('show','active');
+            overviewTab.classList.add('active');
+        }
+    } catch(e) {
+        alert('加载失败: ' + e.message);
+    }
+}
+
+function backToHomeworkOverview() {
+    const detailPane = document.getElementById('homeworkDetail');
+    const overviewPane = document.getElementById('homework');
+    detailPane.classList.remove('show','active');
+    overviewPane.classList.add('show','active');
+}
+
+// ========== 打包下载全部作业 ==========
+function downloadAllSubmissions() {
+    const taskId = document.getElementById('currentTaskId').value;
+    if (!taskId) { alert('未找到当前作业'); return; }
+
+    const btn = document.getElementById('downloadAllBtn');
+    btn.disabled = true;
+
+    // 使用表单提交方式下载，避免fetch的CORS问题
+    const form = document.createElement('form');
+    form.method = 'GET';
+    form.action = '/api/homework-management/download-all';
+    form.style.display = 'none';
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'task_id';
+    input.value = taskId;
+    form.appendChild(input);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    setTimeout(function() {
+        btn.disabled = false;
+    }, 2000);
+}
+
+// ========== 教师管理 ==========
+async function loadTeachers() {
+    try {
+        const resp = await fetch('/api/teachers');
+        const data = await resp.json();
+        if (data.success) {
+            renderTeachers(data.teachers);
+        }
+    } catch(e) {
+        console.error('加载教师列表失败:', e);
+    }
+}
+
+function renderTeachers(teachers) {
+    const table = document.getElementById('teacherTable');
+    table.innerHTML = teachers.map(t => `
+        <tr>
+            <td><code>${t.id}</code></td>
+            <td><strong>${t.name}</strong></td>
+            <td><span class="badge bg-primary">${t.role === 'admin' ? '管理员' : '教师'}</span></td>
+            <td>
+                ${t.id !== 'admin' ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteTeacher('${t.id}','${t.name}')"><i class="bi bi-trash"></i> 删除</button>` : '<span class="text-muted small">系统账号</span>'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function showAddTeacherModal() {
+    document.getElementById('newTeacherId').value = '';
+    document.getElementById('newTeacherName').value = '';
+    document.getElementById('newTeacherPwd').value = '123456';
+    new bootstrap.Modal(document.getElementById('addTeacherModal')).show();
+}
+
+async function addTeacher() {
+    const id = document.getElementById('newTeacherId').value.trim();
+    const name = document.getElementById('newTeacherName').value.trim();
+    const pwd = document.getElementById('newTeacherPwd').value.trim();
+    if (!id || !name) { alert('请填写工号和姓名'); return; }
+    try {
+        const resp = await fetch('/api/teachers', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id, name, password: pwd})
+        });
+        const data = await resp.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addTeacherModal')).hide();
+            loadTeachers();
+            showToast('教师添加成功', 'success');
+        } else {
+            alert(data.message);
+        }
+    } catch(e) {
+        alert('操作失败: ' + e.message);
+    }
+}
+
+async function deleteTeacher(id, name) {
+    if (!confirm(`确定要删除教师 "${name}" (${id}) 吗？`)) return;
+    try {
+        const resp = await fetch(`/api/teachers/${id}`, {method: 'DELETE'});
+        const data = await resp.json();
+        if (data.success) {
+            loadTeachers();
+            showToast('删除成功', 'success');
+        } else {
+            alert(data.message);
+        }
+    } catch(e) {
+        alert('操作失败: ' + e.message);
+    }
+}
+
+// ========== 教案生成 ==========
+let lessonPlanDocx = null;
+
+async function initLessonPlanFilters() {
+    // 加载班级列表
+    try {
+        const resp = await fetch('/api/homework-management/overview');
+        const data = await resp.json();
+        if (data.success) {
+            const classSelect = document.getElementById('lpClassFilter');
+            data.classes.forEach(c => {
+                classSelect.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+            const taskSelect = document.getElementById('lpTaskFilter');
+            data.tasks.forEach(t => {
+                taskSelect.innerHTML += `<option value="${t.task_id}">${t.task_name}</option>`;
+            });
+        }
+    } catch(e) {}
+}
+
+async function generateLessonPlan() {
+    const classFilter = document.getElementById('lpClassFilter').value;
+    const taskFilter = document.getElementById('lpTaskFilter').value;
+    
+    document.getElementById('lessonPlanLoading').classList.remove('d-none');
+    document.getElementById('weakPointsResult').classList.add('d-none');
+    document.getElementById('lessonPlanResult').classList.add('d-none');
+    document.getElementById('genLessonBtn').disabled = true;
+    
+    try {
+        const params = new URLSearchParams();
+        if (classFilter) params.set('class_name', classFilter);
+        if (taskFilter) params.set('task_id', taskFilter);
+        
+        const resp = await fetch(`/api/generate-lesson-plan?${params.toString()}`);
+        const data = await resp.json();
+        
+        document.getElementById('lessonPlanLoading').classList.add('d-none');
+        document.getElementById('genLessonBtn').disabled = false;
+        
+        if (data.success) {
+            // 显示薄弱技能点
+            if (data.weak_points && data.weak_points.length > 0) {
+                document.getElementById('weakPointsResult').classList.remove('d-none');
+                document.getElementById('weakPointsList').innerHTML = data.weak_points.map((wp, i) => `
+                    <div class="d-flex align-items-center mb-2 p-2 rounded" style="background:${i < 3 ? '#fff5f5' : '#f8f9fa'}">
+                        <span class="badge me-2" style="background:${i < 3 ? '#dc3545' : '#6c757d'}">${wp.fail_rate}%</span>
+                        <div>
+                            <strong>${wp.name}</strong>
+                            <small class="text-muted ms-2">(${wp.task_name}) - ${wp.fail_count}人未通过</small>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // 显示教案内容
+            if (data.lesson_plan) {
+                document.getElementById('lessonPlanResult').classList.remove('d-none');
+                document.getElementById('lessonPlanContent').textContent = data.lesson_plan;
+                lessonPlanDocx = data.download_url || null;
+            }
+        } else {
+            alert(data.message || '生成失败');
+        }
+    } catch(e) {
+        document.getElementById('lessonPlanLoading').classList.add('d-none');
+        document.getElementById('genLessonBtn').disabled = false;
+        alert('请求失败: ' + e.message);
+    }
+}
+
+function downloadLessonPlan() {
+    if (lessonPlanDocx) {
+        window.location.href = lessonPlanDocx;
+    } else {
+        alert('请先生成教案');
+    }
+}
+
+loadData();
+</script>
+
+<!-- 需关注列表模态框 -->
+<div class="modal fade" id="attentionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius:16px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#e53e3e,#fc8181);color:white;border-radius:16px 16px 0 0;">
+                <h5 class="modal-title"><i class="bi bi-exclamation-circle"></i> 需关注学生列表</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="attentionModalBody">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加教师模态框 -->
+<div class="modal fade" id="addTeacherModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:16px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-radius:16px 16px 0 0;">
+                <h5 class="modal-title"><i class="bi bi-person-plus"></i> 添加教师</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label">工号</label>
+                    <input type="text" class="form-control" id="newTeacherId" placeholder="请输入工号">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">姓名</label>
+                    <input type="text" class="form-control" id="newTeacherName" placeholder="请输入姓名">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-control" id="newTeacherPwd" placeholder="请输入密码" value="123456">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" onclick="addTeacher()">确认添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 班级详情模态框 -->
+<div class="modal fade" id="classDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius:16px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#2b6cb0,#4299e1);color:white;border-radius:16px 16px 0 0;">
+                <h5 class="modal-title" id="classDetailModalLabel"><i class="bi bi-building me-1"></i>班级详情</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="classDetailModalBody">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}用户登录 - 基于DeepSeek的WPS作业智能批阅与分层推送决策系统{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 480px; margin-top: 80px;">
+    <div class="card shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
+        <!-- 头部 -->
+        <div class="text-center p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <i class="bi bi-robot" style="font-size: 3rem;"></i>
+            <h4 class="mt-2 mb-0">WPS作业智能批阅系统</h4>
+            <small>基于DeepSeek的分层推送决策系统</small>
+        </div>
+        <!-- 登录表单 -->
+        <div class="p-4">
+            <div class="mb-3">
+                <label for="username" class="form-label">
+                    <i class="bi bi-person-badge"></i> 工号 / 学号
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                    <input type="text" class="form-control" id="username" placeholder="请输入工号或学号" autocomplete="username">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">
+                    <i class="bi bi-lock"></i> 密码
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-key"></i></span>
+                    <input type="password" class="form-control" id="password" placeholder="请输入密码" autocomplete="current-password">
+                    <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()">
+                        <i class="bi bi-eye" id="pwdEye"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- 验证码 -->
+            <div class="mb-3">
+                <label for="captcha" class="form-label">
+                    <i class="bi bi-shield-check"></i> 验证码
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-puzzle"></i></span>
+                    <input type="text" class="form-control" id="captcha" placeholder="请输入验证码" autocomplete="off" maxlength="4">
+                    <canvas id="captchaCanvas" width="120" height="38" style="cursor: pointer; border-radius: 0 8px 8px 0; border: 1px solid #dee2e6;" title="点击刷新验证码" onclick="generateCaptcha()"></canvas>
+                </div>
+            </div>
+            <div id="errorMsg" class="alert alert-danger d-none" style="font-size: 0.9rem;"></div>
+            <button class="btn btn-primary w-100 py-2" id="loginBtn" onclick="doLogin()">
+                <i class="bi bi-box-arrow-in-right"></i> 登 录
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== 验证码 =====
+let captchaCode = '';
+
+function generateCaptcha() {
+    const canvas = document.getElementById('captchaCanvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+
+    // 背景
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, w, h);
+
+    // 干扰线
+    for (let i = 0; i < 4; i++) {
+        ctx.strokeStyle = `hsl(${Math.random()*360}, 50%, 70%)`;
+        ctx.beginPath();
+        ctx.moveTo(Math.random()*w, Math.random()*h);
+        ctx.lineTo(Math.random()*w, Math.random()*h);
+        ctx.stroke();
+    }
+
+    // 干扰点
+    for (let i = 0; i < 30; i++) {
+        ctx.fillStyle = `hsl(${Math.random()*360}, 50%, 70%)`;
+        ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+    }
+
+    // 生成4位验证码
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    captchaCode = '';
+    const colors = ['#e53e3e','#2b6cb0','#38a169','#d69e2e','#805ad5','#dd6b20'];
+    for (let i = 0; i < 4; i++) {
+        const ch = chars[Math.floor(Math.random()*chars.length)];
+        captchaCode += ch;
+        ctx.save();
+        ctx.font = `bold ${18 + Math.random()*6}px Arial`;
+        ctx.fillStyle = colors[Math.floor(Math.random()*colors.length)];
+        ctx.translate(20 + i*25, h/2 + 2);
+        ctx.rotate((Math.random()-0.5)*0.4);
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+    }
+}
+
+function togglePwd() {
+    const pwd = document.getElementById('password');
+    const eye = document.getElementById('pwdEye');
+    if (pwd.type === 'password') {
+        pwd.type = 'text';
+        eye.className = 'bi bi-eye-slash';
+    } else {
+        pwd.type = 'password';
+        eye.className = 'bi bi-eye';
+    }
+}
+
+function doLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const captchaInput = document.getElementById('captcha').value.trim();
+    const btn = document.getElementById('loginBtn');
+    const errDiv = document.getElementById('errorMsg');
+
+    if (!username || !password) {
+        errDiv.textContent = '请输入工号和密码';
+        errDiv.classList.remove('d-none');
+        return;
+    }
+
+    if (!captchaInput) {
+        errDiv.textContent = '请输入验证码';
+        errDiv.classList.remove('d-none');
+        return;
+    }
+
+    if (captchaInput.toLowerCase() !== captchaCode.toLowerCase()) {
+        errDiv.textContent = '验证码错误，请重新输入';
+        errDiv.classList.remove('d-none');
+        generateCaptcha();
+        document.getElementById('captcha').value = '';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 登录中...';
+    errDiv.classList.add('d-none');
+
+    fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username, password})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            if (data.user.role === 'teacher' || data.user.role === 'admin') {
+                window.location.href = '/admin';
+            } else {
+                window.location.href = '/';
+            }
+        } else {
+            errDiv.textContent = data.message || '登录失败';
+            errDiv.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> 登 录';
+            generateCaptcha();
+            document.getElementById('captcha').value = '';
+        }
+    })
+    .catch(e => {
+        errDiv.textContent = '网络错误，请重试';
+        errDiv.classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> 登 录';
+        generateCaptcha();
+        document.getElementById('captcha').value = '';
+    });
+}
+
+// 回车登录
+document.getElementById('password').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('captcha').focus();
+});
+document.getElementById('captcha').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doLogin();
+});
+document.getElementById('username').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('password').focus();
+});
+
+// 页面加载时生成验证码
+generateCaptcha();
+</script>
+{% endblock %}

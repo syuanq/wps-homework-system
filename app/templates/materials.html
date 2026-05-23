@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}素材管理 - 基于DeepSeek的WPS作业智能批阅与分层推送决策系统{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="bi bi-file-earmark-arrow-up"></i> 作业素材与标准答案管理</h4>
+        <a href="/admin" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> 返回后台
+        </a>
+    </div>
+
+    <div class="alert alert-info small" style="border-radius:10px;">
+        <i class="bi bi-info-circle me-1"></i>
+        <strong>素材文件：</strong>原始未完成的作业文件，用于学生练习和系统验证文件匹配。<br>
+        <i class="bi bi-check-circle me-1"></i>
+        <strong>标准答案：</strong>教师完成的正确答案文件，用于系统自动比对评分（如COUNTIF函数等）。
+    </div>
+
+    <!-- 任务列表 -->
+    <div class="card border-0 shadow-sm" style="border-radius:12px;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:12%">模块</th>
+                            <th style="width:20%">任务</th>
+                            <th style="width:8%">类型</th>
+                            <th style="width:20%">素材文件</th>
+                            <th style="width:20%">标准答案</th>
+                            <th style="width:20%">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskList">
+                        <tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> 加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 上传素材模态框 -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:12px;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalTitle">上传素材文件</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="uploadTaskInfo" class="text-muted small"></p>
+                <input type="file" class="form-control" id="materialFile" accept=".docx,.xlsx,.pptx">
+                <div class="form-text">请选择与任务对应的素材文件（原始未完成的作业文件）</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="uploadBtn" onclick="doUpload()">
+                    <i class="bi bi-upload"></i> 上传
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 上传标准答案模态框 -->
+<div class="modal fade" id="uploadAnswerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:12px;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadAnswerModalTitle">上传标准答案</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="uploadAnswerTaskInfo" class="text-muted small"></p>
+                <input type="file" class="form-control" id="answerFile" accept=".docx,.xlsx,.pptx">
+                <div class="form-text">请上传教师完成的正确答案文件，系统将根据此文件进行自动比对评分</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-success" id="uploadAnswerBtn" onclick="doUploadAnswer()">
+                    <i class="bi bi-check-circle"></i> 上传答案
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentTaskId = null;
+let materialsData = {};
+let answersData = {};
+
+async function loadData() {
+    // 获取任务列表
+    const taskResp = await fetch('/api/tasks/grouped');
+    const taskData = await taskResp.json();
+    if (!taskData.success) return;
+
+    // 获取素材列表
+    const matResp = await fetch('/api/materials');
+    const matData = await matResp.json();
+    materialsData = matData.success ? matData.data : {};
+
+    // 获取标准答案列表
+    const ansResp = await fetch('/api/answers');
+    const ansData = await ansResp.json();
+    answersData = ansData.success ? ansData.data : {};
+
+    const moduleNames = {wps_word: 'WPS文字', wps_excel: 'WPS表格', wps_ppt: 'WPS演示'};
+    const extNames = {docx: 'Word', xlsx: 'Excel', pptx: 'PPT'};
+    let html = '';
+
+    for (const [groupKey, group] of Object.entries(taskData.groups)) {
+        for (const task of group.tasks) {
+            const mat = materialsData[task.task_id];
+            const hasMat = mat && mat.length > 0;
+            const ans = answersData[task.task_id];
+            const hasAns = ans && ans.length > 0;
+            const ext = extNames[task.file_type] || task.file_type;
+
+            html += `<tr>
+                <td><span class="badge bg-light text-dark border">${moduleNames[groupKey] || groupKey}</span></td>
+                <td>${task.task_name}</td>
+                <td><span class="badge bg-secondary">${ext}</span></td>
+                <td>${hasMat
+                    ? `<small class="text-success"><i class="bi bi-check-circle"></i> ${mat[0].filename}</small>`
+                    : '<small class="text-muted">未上传</small>'
+                }</td>
+                <td>${hasAns
+                    ? `<small class="text-primary"><i class="bi bi-check-circle-fill"></i> ${ans[0].filename}</small>`
+                    : '<small class="text-muted">未上传</small>'
+                }</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="openUpload('${task.task_id}','${task.task_name}','${task.file_type}')" title="上传素材">
+                            <i class="bi bi-upload"></i> 素材
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="openUploadAnswer('${task.task_id}','${task.task_name}','${task.file_type}')" title="上传答案">
+                            <i class="bi bi-check-circle"></i> 答案
+                        </button>
+                    </div>
+                    ${hasMat || hasAns ? `<button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteFiles('${task.task_id}')">
+                        <i class="bi bi-trash"></i>
+                    </button>` : ''}
+                </td>
+            </tr>`;
+        }
+    }
+
+    document.getElementById('taskList').innerHTML = html;
+}
+
+function openUpload(taskId, taskName, fileType) {
+    currentTaskId = taskId;
+    document.getElementById('uploadModalTitle').textContent = `上传素材 - ${taskName}`;
+    document.getElementById('uploadTaskInfo').textContent = `任务ID: ${taskId} | 要求格式: ${fileType.toUpperCase()}`;
+    document.getElementById('materialFile').value = '';
+    new bootstrap.Modal(document.getElementById('uploadModal')).show();
+}
+
+function openUploadAnswer(taskId, taskName, fileType) {
+    currentTaskId = taskId;
+    document.getElementById('uploadAnswerModalTitle').textContent = `上传标准答案 - ${taskName}`;
+    document.getElementById('uploadAnswerTaskInfo').textContent = `任务ID: ${taskId} | 要求格式: ${fileType.toUpperCase()}`;
+    document.getElementById('answerFile').value = '';
+    new bootstrap.Modal(document.getElementById('uploadAnswerModal')).show();
+}
+
+async function doUpload() {
+    const fileInput = document.getElementById('materialFile');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('请选择文件');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const btn = document.getElementById('uploadBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 上传中...';
+
+    try {
+        const resp = await fetch(`/api/materials/${currentTaskId}`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await resp.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+            loadData();
+        } else {
+            alert(data.message || '上传失败');
+        }
+    } catch (e) {
+        alert('上传失败: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-upload"></i> 上传';
+    }
+}
+
+async function doUploadAnswer() {
+    const fileInput = document.getElementById('answerFile');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('请选择文件');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const btn = document.getElementById('uploadAnswerBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 上传中...';
+
+    try {
+        const resp = await fetch(`/api/answers/${currentTaskId}`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await resp.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('uploadAnswerModal')).hide();
+            loadData();
+        } else {
+            alert(data.message || '上传失败');
+        }
+    } catch (e) {
+        alert('上传失败: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> 上传答案';
+    }
+}
+
+async function deleteFiles(taskId) {
+    if (!confirm('确定要删除该任务的素材和标准答案吗？')) return;
+
+    try {
+        await fetch(`/api/materials/${taskId}`, {method: 'DELETE'});
+        await fetch(`/api/answers/${taskId}`, {method: 'DELETE'});
+        loadData();
+    } catch (e) {
+        alert('删除失败: ' + e.message);
+    }
+}
+
+function showToast(msg) {
+    const toast = document.createElement('div');
+    toast.className = 'position-fixed top-0 end-0 p-3';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `<div class="alert alert-success py-2 px-3" style="border-radius:10px;"><i class="bi bi-check-circle"></i> ${msg}</div>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
+
+loadData();
+</script>
+{% endblock %}

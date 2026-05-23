@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+{% block title %}我的作业记录 - 基于DeepSeek的WPS作业智能批阅与分层推送决策系统{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="bi bi-clock-history"></i> 我的作业记录</h4>
+        <a href="/" class="btn btn-primary"><i class="bi bi-plus-lg"></i> 提交新作业</a>
+    </div>
+
+    <!-- 模块选项卡 -->
+    <ul class="nav nav-tabs mb-4" id="moduleTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-all" data-module="all" type="button" role="tab"
+                style="border-radius:8px 8px 0 0;">
+                <i class="bi bi-grid-3x3-gap"></i> 全部
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-wps_word" data-module="WPS文字" type="button" role="tab"
+                style="border-radius:8px 8px 0 0;">
+                <i class="bi bi-file-earmark-word"></i> WPS文档
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-wps_excel" data-module="WPS表格" type="button" role="tab"
+                style="border-radius:8px 8px 0 0;">
+                <i class="bi bi-file-earmark-spreadsheet"></i> WPS表格
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-wps_ppt" data-module="WPS演示" type="button" role="tab"
+                style="border-radius:8px 8px 0 0;">
+                <i class="bi bi-file-earmark-slides"></i> WPS演示
+            </button>
+        </li>
+    </ul>
+
+    <!-- 统计概览 -->
+    <div class="row g-3 mb-4" id="statsCards">
+        <div class="col-md-3">
+            <div class="card text-center p-3 border-0 shadow-sm" style="border-radius:12px;">
+                <div class="fs-2 fw-bold text-primary" id="statTotal">0</div>
+                <small class="text-muted">提交总数</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center p-3 border-0 shadow-sm" style="border-radius:12px;">
+                <div class="fs-2 fw-bold text-success" id="statAvg">0</div>
+                <small class="text-muted">平均分</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center p-3 border-0 shadow-sm" style="border-radius:12px;">
+                <div class="fs-2 fw-bold" style="color:#28a745;" id="statMax">0</div>
+                <small class="text-muted">最高分</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center p-3 border-0 shadow-sm" style="border-radius:12px;">
+                <div class="fs-2 fw-bold" style="color:#667eea;" id="statExcellent">0</div>
+                <small class="text-muted">优秀次数</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- 作业列表 -->
+    <div id="submissionList">
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border mb-3"></div>
+            <p>加载中...</p>
+        </div>
+    </div>
+
+    <!-- 学习建议 -->
+    <div id="learningAdvice" class="mt-4" style="display:none;">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-header bg-white" style="border-radius:12px 12px 0 0;border-bottom:2px solid #667eea;">
+                <h5 class="mb-0"><i class="bi bi-lightbulb" style="color:#667eea;"></i> 学习建议</h5>
+            </div>
+            <div class="card-body" id="adviceContent">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allSubmissions = [];
+let currentModule = 'all';
+
+// 选项卡切换
+document.getElementById('moduleTabs').addEventListener('click', function(e) {
+    const btn = e.target.closest('.nav-link');
+    if (!btn) return;
+    document.querySelectorAll('#moduleTabs .nav-link').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentModule = btn.dataset.module;
+    renderList();
+});
+
+async function loadMySubmissions() {
+    try {
+        const resp = await fetch('/api/my-submissions');
+        const data = await resp.json();
+
+        if (!data.success) {
+            document.getElementById('submissionList').innerHTML =
+                '<div class="alert alert-warning">请先登录后查看作业记录</div>';
+            return;
+        }
+
+        allSubmissions = data.submissions || [];
+        renderList();
+        renderAdvice();
+
+    } catch(e) {
+        document.getElementById('submissionList').innerHTML =
+            '<div class="alert alert-danger">加载失败: ' + e.message + '</div>';
+    }
+}
+
+function renderList() {
+    const subs = currentModule === 'all'
+        ? allSubmissions
+        : allSubmissions.filter(s => (s.score_result?.module || '') === currentModule);
+
+    // 统计
+    const scores = subs.map(s => s.score_result?.total_score || 0).filter(s => s > 0);
+    const total = subs.length;
+    const avg = scores.length ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
+    const max = scores.length ? Math.max(...scores) : 0;
+    const excellent = scores.filter(s => s >= 85).length;
+
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statAvg').textContent = avg;
+    document.getElementById('statMax').textContent = max;
+    document.getElementById('statExcellent').textContent = excellent;
+
+    if (total === 0) {
+        document.getElementById('submissionList').innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-inbox fs-1 text-muted"></i>
+                <p class="text-muted mt-3">${currentModule === 'all' ? '暂无提交记录' : '该模块暂无提交记录'}</p>
+                <a href="/" class="btn btn-primary">去提交作业</a>
+            </div>`;
+        return;
+    }
+
+    // 按模块分组渲染
+    let html = '';
+    let idx = 0;
+    if (currentModule === 'all') {
+        // 全部模式下按模块分组
+        const groups = {};
+        subs.forEach(sub => {
+            const mod = sub.score_result?.module || '其他';
+            if (!groups[mod]) groups[mod] = [];
+            groups[mod].push(sub);
+        });
+        const moduleIcons = {'WPS文字': 'bi-file-earmark-word', 'WPS表格': 'bi-file-earmark-spreadsheet', 'WPS演示': 'bi-file-earmark-slides'};
+        const moduleColors = {'WPS文字': '#2b6cb0', 'WPS表格': '#38a169', 'WPS演示': '#d69e2e'};
+
+        Object.entries(groups).forEach(([mod, items]) => {
+            const icon = moduleIcons[mod] || 'bi-file-earmark';
+            const color = moduleColors[mod] || '#667eea';
+            html += `<div class="mb-3">
+                <h6 style="color:${color};border-bottom:2px solid ${color};padding-bottom:6px;">
+                    <i class="bi ${icon}"></i> ${mod}
+                    <small class="text-muted fw-normal"> (${items.length}项)</small>
+                </h6>`;
+            items.forEach(sub => {
+                idx++;
+                html += renderSubmissionItem(sub, idx);
+            });
+            html += '</div>';
+        });
+    } else {
+        subs.forEach(sub => {
+            idx++;
+            html += renderSubmissionItem(sub, idx);
+        });
+    }
+
+    document.getElementById('submissionList').innerHTML = html;
+}
+
+function renderSubmissionItem(sub, idx) {
+    const sr = sub.score_result || {};
+    const score = sr.total_score || 0;
+    const maxScore = sr.max_score || 100;
+    const levelColor = sr.level_color || '#6c757d';
+    const levelName = sr.level_name || '-';
+    const taskName = sr.task_name || sub.task_id || '-';
+    const module = sr.module || '';
+    const time = sub.submitted_at || '';
+    const sid = sub.submission_id || '';
+
+    // 分类通过率
+    const cats = sr.category_summary || {};
+    const catHtml = Object.entries(cats).map(([cat, info]) => {
+        const cp = info.total > 0 ? Math.round(info.passed / info.total * 100) : 0;
+        const cc = cp >= 80 ? '#38a169' : cp >= 50 ? '#dd6b20' : '#e53e3e';
+        return `<span class="badge" style="background:${cc}15;color:${cc};font-size:0.75rem;">${cat} ${info.passed}/${info.total}</span>`;
+    }).join(' ');
+
+    return `
+    <div class="list-group-item list-group-item-action p-3" style="border-radius:12px;margin-bottom:8px;border:1px solid #e2e8f0;">
+        <div class="row align-items-center">
+            <div class="col-auto" style="min-width:40px;">
+                <span class="badge bg-light text-secondary" style="font-size:0.85rem;border-radius:8px;">${idx}</span>
+            </div>
+            <div class="col-md-3">
+                <div class="fw-bold">${taskName}</div>
+                <small class="text-muted">${module}</small>
+                <div class="mt-1">${catHtml}</div>
+            </div>
+            <div class="col-md-2 text-center">
+                <div class="fs-3 fw-bold" style="color:${levelColor};">${score}</div>
+                <small class="text-muted">/ ${maxScore}分</small>
+            </div>
+            <div class="col-md-2 text-center">
+                <span class="badge" style="background:${levelColor};color:#fff;font-size:0.85rem;padding:6px 14px;border-radius:20px;">
+                    ${levelName}
+                </span>
+            </div>
+            <div class="col-md-2 text-center">
+                <small class="text-muted">${time.substring(0, 16)}</small>
+            </div>
+            <div class="col-md-3 text-end">
+                <a href="/api/submission/${sid}/download" class="btn btn-sm btn-outline-info me-1" style="border-radius:8px;" target="_blank">
+                    <i class="bi bi-download"></i> 下载
+                </a>
+                <a href="/result/${sid}" class="btn btn-sm btn-outline-primary me-1" style="border-radius:8px;">
+                    <i class="bi bi-eye"></i> 查看报告
+                </a>
+                <button class="btn btn-sm btn-outline-success" style="border-radius:8px;" onclick="generatePracticeFromHistory('${sub.task_id}', '${sid}')">
+                    <i class="bi bi-magic"></i> AI生成作业
+                </button>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function generatePracticeFromHistory(taskId, submissionId) {
+    if (!confirm('将根据本次作业的评分结果，AI生成针对性的分层练习任务。确定继续？')) return;
+    
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> AI生成中...';
+    
+    try {
+        // 使用与报告页面相同的接口
+        const startResp = await fetch('/api/generate-tasks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ submission_id: submissionId })
+        });
+        const startData = await startResp.json();
+        
+        if (!startData.success) {
+            alert('生成失败：' + (startData.message || '未知错误'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+        
+        // 如果直接返回了结果
+        if (startData.learning_tasks) {
+            alert('AI生成完成！请点击"查看报告"查看生成的学习任务。');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+        
+        // 轮询等待结果
+        let pollCount = 0;
+        const maxPolls = 60;
+        
+        const pollInterval = setInterval(async () => {
+            pollCount++;
+            try {
+                const pollResp = await fetch('/api/generate-tasks/status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ submission_id: submissionId })
+                });
+                const pollData = await pollResp.json();
+                
+                if (pollData.status === 'done') {
+                    clearInterval(pollInterval);
+                    alert('AI生成完成！请点击"查看报告"查看生成的学习任务。');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                } else if (pollData.status === 'error') {
+                    clearInterval(pollInterval);
+                    alert('生成失败：' + (pollData.message || '请重试'));
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                } else if (pollCount >= maxPolls) {
+                    clearInterval(pollInterval);
+                    alert('生成超时，请稍后重试');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                } else {
+                    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 生成中(' + pollCount + '秒)...';
+                }
+            } catch(e) {
+                if (pollCount >= maxPolls) {
+                    clearInterval(pollInterval);
+                    alert('网络不稳定，请重试');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+        }, 2000);
+        
+    } catch(e) {
+        alert('网络错误：' + (e.message || '请检查网络连接'));
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+function renderAdvice() {
+    if (allSubmissions.length === 0) return;
+
+    const advices = [];
+    const scores = allSubmissions.map(s => ({
+        name: s.score_result?.task_name || s.task_id || '',
+        module: s.score_result?.module || '',
+        score: s.score_result?.total_score || 0,
+        level: s.score_result?.level_name || '',
+        details: s.score_result?.details || []
+    }));
+
+    // 按模块分析
+    const modules = {};
+    scores.forEach(s => {
+        if (!modules[s.module]) modules[s.module] = [];
+        modules[s.module].push(s);
+    });
+
+    Object.entries(modules).forEach(([mod, items]) => {
+        const avg = Math.round(items.reduce((a,b) => a+b.score, 0) / items.length);
+        const weakItems = items.filter(i => i.score < 60);
+        const strongItems = items.filter(i => i.score >= 85);
+
+        if (weakItems.length > 0) {
+            const names = weakItems.map(i => `<strong>${i.name}</strong>（${i.score}分）`).join('、');
+            advices.push({
+                icon: 'bi-exclamation-triangle',
+                color: '#e53e3e',
+                title: `${mod} - 需要加强`,
+                text: `${names} 得分较低，建议重新练习这些任务，重点复习相关操作步骤。`
+            });
+        } else if (avg >= 85) {
+            advices.push({
+                icon: 'bi-trophy',
+                color: '#38a169',
+                title: `${mod} - 掌握良好`,
+                text: `平均分${avg}分，所有任务均达标${strongItems.length === items.length ? '且优秀' : ''}，继续保持！`
+            });
+        } else {
+            advices.push({
+                icon: 'bi-arrow-up-circle',
+                color: '#dd6b20',
+                title: `${mod} - 有提升空间`,
+                text: `平均分${avg}分，建议重点练习得分较低的任务，争取全部达到优秀水平。`
+            });
+        }
+
+        // 找出每个模块中共同的薄弱评分项
+        const detailCount = {};
+        items.forEach(item => {
+            item.details.forEach(d => {
+                if (!d.passed) {
+                    const key = d.name;
+                    if (!detailCount[key]) detailCount[key] = 0;
+                    detailCount[key]++;
+                }
+            });
+        });
+        const weakDetails = Object.entries(detailCount)
+            .filter(([k,v]) => v >= 2)
+            .sort((a,b) => b[1] - a[1])
+            .slice(0, 3);
+        if (weakDetails.length > 0) {
+            const names = weakDetails.map(([k,v]) => `${k}（${v}次未通过）`).join('、');
+            advices.push({
+                icon: 'bi-wrench',
+                color: '#667eea',
+                title: `${mod} - 薄弱环节`,
+                text: `以下操作多次未通过：${names}，建议针对性练习。`
+            });
+        }
+    });
+
+    if (advices.length === 0) return;
+
+    const adviceHtml = advices.map(a => `
+        <div class="d-flex align-items-start mb-3">
+            <i class="bi ${a.icon} fs-4 me-3" style="color:${a.color};"></i>
+            <div>
+                <strong style="color:${a.color};">${a.title}</strong>
+                <p class="mb-0 text-muted">${a.text}</p>
+            </div>
+        </div>
+    `).join('<hr style="border-color:#e2e8f0;">');
+
+    document.getElementById('adviceContent').innerHTML = adviceHtml;
+    document.getElementById('learningAdvice').style.display = 'block';
+}
+
+loadMySubmissions();
+</script>
+{% endblock %}

@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+{% block title %}评分结果 - 基于DeepSeek的WPS作业智能批阅与分层推送决策系统{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- 顶部信息 -->
+    <div class="text-center mb-4">
+        <h3><i class="bi bi-clipboard-check"></i> 作业评分报告</h3>
+        <p class="text-muted" id="submitInfo">加载中...</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- 左侧：分数和等级 -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body text-center p-4">
+                    <!-- 分数圆圈 -->
+                    <div class="score-circle mb-3" id="scoreCircle" style="background: #f7fafc;">
+                        <div class="score-number" id="scoreNumber">--</div>
+                        <div class="score-label">总分</div>
+                    </div>
+                    
+                    <!-- 等级标签 -->
+                    <div class="mb-3">
+                        <span class="level-badge" id="levelBadge">--</span>
+                    </div>
+                    <p class="text-muted" id="levelDesc">--</p>
+                    
+                    <hr>
+                    
+                    <!-- 任务信息 -->
+                    <div class="text-start">
+                        <div class="mb-2">
+                            <small class="text-muted">作业任务</small>
+                            <div class="fw-bold" id="taskName">--</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">所属模块</small>
+                            <div id="taskModule">--</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">提交时间</small>
+                            <div id="submitTime">--</div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- AI分层任务按钮 -->
+                    <button class="btn btn-primary w-100 mb-2" id="genTasksBtn" onclick="generateTasks()">
+                        <i class="bi bi-magic"></i> AI生成分层学习任务
+                    </button>
+                    <!-- 下载练习文档按钮 -->
+                    <button class="btn btn-success w-100 mb-2" id="downloadPracticeBtn" onclick="generatePracticeDoc()" style="display:none;">
+                        <i class="bi bi-file-earmark-arrow-down"></i> 下载分层练习文档
+                    </button>
+                    <button class="btn btn-outline-secondary w-100" onclick="window.location.href='/'">
+                        <i class="bi bi-arrow-left"></i> 返回提交
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：评分详情 -->
+        <div class="col-lg-8">
+            <!-- 评分概览（雷达图+分类汇总） -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5 class="mb-3"><i class="bi bi-bar-chart"></i> 能力维度分析</h5>
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <div class="text-center">
+                                <canvas id="radarChart" width="320" height="280"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <div id="categorySummary">
+                                <!-- 由JS渲染 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 详细评分项 -->
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5 class="mb-3"><i class="bi bi-list-check"></i> 操作步骤评分详情</h5>
+                    <div id="detailList">
+                        <!-- 由JS渲染 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI学习建议（初始隐藏） -->
+            <div class="card border-0 shadow-sm mt-4 d-none" id="adviceCard" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5 class="mb-3"><i class="bi bi-lightbulb"></i> AI个性化学习建议</h5>
+                    <div id="adviceContent" class="p-3 bg-light rounded-3">
+                        <!-- 由JS渲染 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分层学习任务（初始隐藏） -->
+            <div class="card border-0 shadow-sm mt-4 d-none" id="tasksCard" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5 class="mb-3"><i class="bi bi-layers"></i> AI分层学习任务推荐</h5>
+                    <div id="tasksContent">
+                        <!-- 由JS渲染 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 加载遮罩 -->
+<div class="loading-overlay d-none" id="loadingOverlay">
+    <div class="loading-box">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h5 id="loadingText">AI正在生成分层学习任务...</h5>
+        <p class="text-muted">基于DeepSeek大模型，请稍候</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const submissionId = '{{ submission_id }}';
+let submissionData = null;
+
+// 加载评分结果
+async function loadResult() {
+    try {
+        const resp = await fetch('/api/result/' + submissionId);
+        const data = await resp.json();
+        if (data.success) {
+            submissionData = data.data;
+            renderResult(submissionData);
+        } else {
+            document.getElementById('submitInfo').textContent = '未找到该提交记录';
+        }
+    } catch(e) {
+        document.getElementById('submitInfo').textContent = '加载失败，请刷新重试';
+    }
+}
+
+function renderResult(data) {
+    const result = data.score_result;
+    
+    // 基本信息
+    document.getElementById('submitInfo').textContent = 
+        `${data.student_name} | ${result.task_name} | ${data.submitted_at}`;
+    document.getElementById('taskName').textContent = result.task_name;
+    document.getElementById('taskModule').textContent = result.module;
+    document.getElementById('submitTime').textContent = data.submitted_at;
+    
+    // 分数
+    document.getElementById('scoreNumber').textContent = result.total_score + '/' + result.max_score;
+    document.getElementById('scoreCircle').style.background = result.level_color + '15';
+    document.getElementById('scoreNumber').style.color = result.level_color;
+    
+    // 等级
+    const badge = document.getElementById('levelBadge');
+    badge.textContent = result.level_name + ' (' + result.percentage + '%)';
+    badge.style.background = result.level_color + '20';
+    badge.style.color = result.level_color;
+    document.getElementById('levelDesc').textContent = result.level_desc;
+    
+    // 内容不匹配警告
+    if (result.content_warning) {
+        const scoreSection = document.getElementById('scoreCircle').parentElement;
+        const warning = document.createElement('div');
+        warning.className = 'alert alert-danger mt-3';
+        warning.style.borderRadius = '10px';
+        warning.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i><strong>文档内容不匹配！</strong><br>' + 
+            '<span class="small">' + result.content_warning + '</span><br>' +
+            '<span class="small text-muted">请确认上传的是本任务要求的文档，而非其他任务的文档。</span>';
+        scoreSection.after(warning);
+    }
+    
+    // 分类汇总
+    renderCategorySummary(result.category_summary, result.max_score);
+    
+    // 详细评分
+    renderDetails(result.details);
+    
+    // 如果已有分层任务，直接显示
+    if (data.learning_tasks) {
+        renderLearningTasks(data.learning_tasks);
+    }
+    if (data.study_advice) {
+        renderAdvice(data.study_advice);
+    }
+}
+
+function renderCategorySummary(summary, maxScore) {
+    const container = document.getElementById('categorySummary');
+    const categories = Object.entries(summary);
+    
+    container.innerHTML = categories.map(([cat, info]) => {
+        const pct = info.total > 0 ? Math.round(info.passed / info.total * 100) : 0;
+        const color = pct >= 80 ? '#38a169' : pct >= 50 ? '#dd6b20' : '#e53e3e';
+        return `
+            <div class="mb-2 p-2 rounded-3" style="background: ${color}08; border: 1px solid ${color}30;">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="fw-bold" style="font-size:0.9rem;">${cat}</span>
+                    <span style="color: ${color}; font-size:0.9rem;">${info.passed}/${info.total} 通过</span>
+                </div>
+                <div class="progress" style="height: 5px;">
+                    <div class="progress-bar" style="width: ${pct}%; background: ${color}"></div>
+                </div>
+                <small class="text-muted">得分 ${info.score} 分</small>
+            </div>
+        `;
+    }).join('');
+
+    // 绘制雷达图
+    drawRadarChart(categories);
+}
+
+function drawRadarChart(categories) {
+    const canvas = document.getElementById('radarChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cx = W / 2, cy = H / 2 + 5;
+    const R = Math.min(W, H) / 2 - 40;
+    const n = categories.length;
+    if (n < 3) return; // 至少3个维度才画雷达图
+
+    ctx.clearRect(0, 0, W, H);
+
+    // 计算角度
+    const angleStep = (2 * Math.PI) / n;
+    const startAngle = -Math.PI / 2; // 从顶部开始
+
+    // 获取坐标
+    function getPos(i, ratio) {
+        const angle = startAngle + i * angleStep;
+        return {
+            x: cx + R * ratio * Math.cos(angle),
+            y: cy + R * ratio * Math.sin(angle)
+        };
+    }
+
+    // 绘制背景网格
+    const levels = [0.25, 0.5, 0.75, 1.0];
+    levels.forEach((level, li) => {
+        ctx.beginPath();
+        for (let i = 0; i <= n; i++) {
+            const p = getPos(i % n, level);
+            if (i === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    });
+
+    // 绘制轴线
+    for (let i = 0; i < n; i++) {
+        const p = getPos(i, 1);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // 绘制数据区域
+    const data = categories.map(([cat, info]) => {
+        return info.total > 0 ? info.passed / info.total : 0;
+    });
+
+    // 填充区域
+    ctx.beginPath();
+    data.forEach((val, i) => {
+        const p = getPos(i, val);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(102, 126, 234, 0.2)';
+    ctx.fill();
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 绘制数据点
+    data.forEach((val, i) => {
+        const p = getPos(i, val);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = '#667eea';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    });
+
+    // 绘制标签
+    ctx.font = '11px "Microsoft YaHei", sans-serif';
+    ctx.fillStyle = '#4a5568';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    categories.forEach(([cat, info], i) => {
+        const p = getPos(i, 1.18);
+        // 简化标签名称
+        let label = cat.length > 6 ? cat.substring(0, 6) + '..' : cat;
+        ctx.fillText(label, p.x, p.y);
+        // 显示百分比
+        const pct = info.total > 0 ? Math.round(info.passed / info.total * 100) : 0;
+        const pp = getPos(i, 1.32);
+        ctx.font = 'bold 11px "Microsoft YaHei", sans-serif';
+        ctx.fillStyle = pct >= 80 ? '#38a169' : pct >= 50 ? '#dd6b20' : '#e53e3e';
+        ctx.fillText(pct + '%', pp.x, pp.y);
+        ctx.font = '11px "Microsoft YaHei", sans-serif';
+        ctx.fillStyle = '#4a5568';
+    });
+}
+
+function renderDetails(details) {
+    const container = document.getElementById('detailList');
+    
+    // 按分类分组
+    const groups = {};
+    details.forEach(item => {
+        if (!groups[item.category]) groups[item.category] = [];
+        groups[item.category].push(item);
+    });
+    
+    container.innerHTML = Object.entries(groups).map(([cat, items]) => `
+        <h6 class="mt-3 mb-2 text-muted">${cat}</h6>
+        ${items.map(item => `
+            <div class="check-item d-flex align-items-center">
+                <div class="me-3">
+                    ${item.passed 
+                        ? '<i class="bi bi-check-circle-fill check-pass fs-5"></i>' 
+                        : '<i class="bi bi-x-circle-fill check-fail fs-5"></i>'}
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-bold ${item.passed ? 'check-pass' : 'check-fail'}">${item.name}</div>
+                    <small class="text-muted">${item.message}</small>
+                </div>
+                <div class="text-end">
+                    <span class="badge ${item.passed ? 'bg-success' : 'bg-secondary'}">
+                        ${item.passed ? '+' + item.score : '0'}分
+                    </span>
+                </div>
+            </div>
+        `).join('')}
+    `).join('');
+}
+
+// AI生成分层任务（异步轮询模式）
+async function generateTasks() {
+    document.getElementById('loadingOverlay').classList.remove('d-none');
+    document.getElementById('genTasksBtn').disabled = true;
+    document.getElementById('genTasksBtn').innerHTML = '<i class="bi bi-hourglass-split"></i> AI生成中，请等待...';
+    
+    try {
+        // 第一步：发起生成请求（立即返回）
+        const startResp = await fetch('/api/generate-tasks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ submission_id: submissionId })
+        });
+        const startData = await startResp.json();
+        
+        if (!startData.success) {
+            alert('生成失败：' + (startData.message || '未知错误'));
+            resetGenBtn();
+            return;
+        }
+        
+        // 如果直接返回了结果（已有缓存）
+        if (startData.learning_tasks) {
+            if (startData.study_advice) renderAdvice(startData.study_advice);
+            if (startData.learning_tasks) renderLearningTasks(startData.learning_tasks);
+            resetGenBtn();
+            return;
+        }
+        
+        // 第二步：轮询等待结果
+        let pollCount = 0;
+        const maxPolls = 60; // 最多轮询60次（约2分钟）
+        
+        const pollInterval = setInterval(async () => {
+            pollCount++;
+            try {
+                const pollResp = await fetch('/api/generate-tasks/status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ submission_id: submissionId })
+                });
+                const pollData = await pollResp.json();
+                
+                if (pollData.status === 'done') {
+                    clearInterval(pollInterval);
+                    if (pollData.study_advice) renderAdvice(pollData.study_advice);
+                    if (pollData.learning_tasks) renderLearningTasks(pollData.learning_tasks);
+                    resetGenBtn();
+                } else if (pollData.status === 'error') {
+                    clearInterval(pollInterval);
+                    alert('生成失败：' + (pollData.message || '请重试'));
+                    resetGenBtn();
+                } else if (pollCount >= maxPolls) {
+                    clearInterval(pollInterval);
+                    alert('生成超时，请稍后重试');
+                    resetGenBtn();
+                } else {
+                    // 更新等待提示
+                    document.getElementById('genTasksBtn').innerHTML = 
+                        '<i class="bi bi-hourglass-split"></i> AI生成中（' + pollCount + '秒）...';
+                }
+            } catch(e) {
+                // 轮询请求失败，继续等待
+                if (pollCount >= maxPolls) {
+                    clearInterval(pollInterval);
+                    alert('网络不稳定，请重试');
+                    resetGenBtn();
+                }
+            }
+        }, 2000); // 每2秒轮询一次
+        
+    } catch(e) {
+        alert('网络错误：' + (e.message || '请检查网络连接'));
+        resetGenBtn();
+    }
+}
+
+function resetGenBtn() {
+    document.getElementById('loadingOverlay').classList.add('d-none');
+    document.getElementById('genTasksBtn').disabled = false;
+    document.getElementById('genTasksBtn').innerHTML = '<i class="bi bi-magic"></i> AI生成个性化作业';
+}
+
+function renderAdvice(advice) {
+    const card = document.getElementById('adviceCard');
+    const content = document.getElementById('adviceContent');
+    // 清理 markdown 代码块标记
+    let cleanedAdvice = advice.replace(/^```\w*\n?/g, '').replace(/```$/g, '').trim();
+    content.innerHTML = `<p class="mb-0">${cleanedAdvice.replace(/\n/g, '<br>')}</p>`;
+    card.classList.remove('d-none');
+}
+
+function renderLearningTasks(tasksResult) {
+    const card = document.getElementById('tasksCard');
+    const content = document.getElementById('tasksContent');
+    const currentLevel = tasksResult.current_level;
+    window._currentLevel = currentLevel; // 存为全局变量供下载使用
+    
+    const levelNames = {
+        'excellent': { name: '优秀', color: '#28a745', icon: 'bi-star-fill' },
+        'good': { name: '良好', color: '#17a2b8', icon: 'bi-hand-thumbs-up' },
+        'pass': { name: '及格', color: '#ffc107', icon: 'bi-exclamation-triangle' },
+        'fail': { name: '需努力', color: '#dc3545', icon: 'bi-arrow-down-circle' },
+    };
+    
+    const tasks = tasksResult.tasks;
+    if (!tasks) {
+        content.innerHTML = `<div class="alert alert-warning">${tasksResult.error || 'AI生成失败'}</div>
+            <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">${tasksResult.raw_response || ''}</pre>`;
+        card.classList.remove('d-none');
+        return;
+    }
+    
+    const levelOrder = ['excellent', 'good', 'pass', 'fail'];
+    
+    content.innerHTML = `
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 
+            您当前等级为 <strong>${tasksResult.current_level_name}</strong>（${tasksResult.current_level_desc}），
+            以下是为您推荐的分层学习任务，请优先完成当前等级的任务。
+        </div>
+        ${levelOrder.map(level => {
+            const info = levelNames[level];
+            const levelTasks = tasks[level] || [];
+            if (!levelTasks.length) return '';
+            const isCurrent = level === currentLevel;
+            return `
+                <div class="mb-4">
+                    <h6 style="color: ${info.color}">
+                        <i class="bi ${info.icon}"></i> ${info.name}层任务
+                        ${isCurrent ? '<span class="badge bg-primary ms-2">推荐</span>' : ''}
+                    </h6>
+                    ${levelTasks.map(task => `
+                        <div class="task-recommendation" style="border-color: ${info.color}">
+                            <div class="fw-bold">${task.name} 
+                                <span class="badge ms-2" style="background: ${info.color}20; color: ${info.color}">${task.difficulty || ''}</span>
+                            </div>
+                            <p class="text-muted mb-0 mt-1">${task.description}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }).join('')}
+    `;
+    
+    card.classList.remove('d-none');
+
+    // 显示下载练习文档按钮
+    document.getElementById('downloadPracticeBtn').style.display = 'block';
+}
+
+async function generatePracticeDoc() {
+    const btn = document.getElementById('downloadPracticeBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 正在生成练习文档...';
+
+    try {
+        // 直接下载（使用generateTasks已生成的数据，不需要再调AI）
+        const dlResp = await fetch('/api/practice/download', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({submission_id: submissionId, level: window._currentLevel || ''})
+        });
+        if (!dlResp.ok) {
+            const errData = await dlResp.json().catch(() => ({}));
+            throw new Error(errData.message || 'HTTP ' + dlResp.status);
+        }
+        const blob = await dlResp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '分层练习文档.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> 已下载';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="bi bi-file-earmark-arrow-down"></i> 重新下载练习文档';
+            btn.disabled = false;
+        }, 3000);
+    } catch(e) {
+        alert('下载失败: ' + e.message);
+        btn.innerHTML = '<i class="bi bi-file-earmark-arrow-down"></i> 下载分层练习文档';
+        btn.disabled = false;
+    }
+}
+
+loadResult();
+</script>
+{% endblock %}

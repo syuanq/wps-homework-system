@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
+instance/
+.webassets-cache
+
+# 数据库和数据文件
+data/*.db
+data/uploads/
+data/results/
+data/generated/
+data/materials/
+data/answers/
+data/*.json
+
+# 环境变量
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 临时文件
+*.log
+*.tmp
+*.bak
+
+# 申报文档（包含个人信息）
+申报文档/
+
+# 迁移脚本
+migrate_to_sqlite*.py
+replace_*.py
+check_sensitive.py
+delete_json_files.py
+clean_for_github.py
+fix_passwords.py

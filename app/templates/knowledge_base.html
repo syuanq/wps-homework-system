@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% block title %}知识库管理 - 基于DeepSeek的WPS作业智能批阅与分层推送决策系统{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="bi bi-book"></i> 教材知识库管理（RAG）</h4>
+        <div>
+            <button class="btn btn-outline-secondary me-2" onclick="resetKB()">
+                <i class="bi bi-arrow-counterclockwise"></i> 恢复默认
+            </button>
+            <a href="/admin" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> 返回后台
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-info small" style="border-radius:10px;">
+        <i class="bi bi-info-circle me-1"></i>
+        知识库用于RAG（检索增强生成），AI生成练习任务时会自动检索相关知识注入prompt。
+        修改知识库后，下次AI生成任务时将使用最新内容。数据存储在 <code>data/knowledge_base.json</code> 文件中。
+    </div>
+
+    <!-- 模块标签页 -->
+    <ul class="nav nav-tabs mb-4" id="moduleTabs">
+        <li class="nav-item">
+            <a class="nav-link active" href="#" data-module="wps_word" onclick="switchModule('wps_word', this)">
+                <i class="bi bi-file-earmark-word"></i> WPS文字
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-module="wps_excel" onclick="switchModule('wps_excel', this)">
+                <i class="bi bi-file-earmark-excel"></i> WPS表格
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-module="wps_ppt" onclick="switchModule('wps_ppt', this)">
+                <i class="bi bi-file-earmark-ppt"></i> WPS演示
+            </a>
+        </li>
+    </ul>
+
+    <!-- 模块内容 -->
+    <div id="moduleContent">
+        <div class="text-center py-5"><div class="spinner-border"></div><p class="mt-2">加载中...</p></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentModule = 'wps_word';
+let kbData = null;
+
+async function loadKB() {
+    const resp = await fetch('/api/knowledge-base');
+    const data = await resp.json();
+    if (data.success) {
+        kbData = data.data;
+        renderModule(currentModule);
+    }
+}
+
+function switchModule(moduleKey, el) {
+    currentModule = moduleKey;
+    document.querySelectorAll('#moduleTabs .nav-link').forEach(a => a.classList.remove('active'));
+    el.classList.add('active');
+    renderModule(moduleKey);
+}
+
+function renderModule(key) {
+    if (!kbData || !kbData[key]) return;
+    const mod = kbData[key];
+    const container = document.getElementById('moduleContent');
+
+    let html = `
+    <div class="row g-4">
+        <!-- 左侧：核心概念 + 操作 -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+                <div class="card-body p-3">
+                    <h6 class="mb-3"><i class="bi bi-lightbulb"></i> 核心概念</h6>
+                    <div class="d-flex flex-wrap gap-2" id="conceptsArea">
+                        ${mod.concepts.map((c, i) => `
+                            <span class="badge bg-light text-dark border" style="font-size:0.85rem;">
+                                ${c}
+                                <a href="#" class="ms-1 text-danger" onclick="removeConcept(${i})" title="删除">&times;</a>
+                            </span>
+                        `).join('')}
+                    </div>
+                    <div class="input-group mt-2">
+                        <input type="text" class="form-control form-control-sm" id="newConcept" placeholder="添加新概念...">
+                        <button class="btn btn-sm btn-outline-primary" onclick="addConcept()">添加</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+                <div class="card-body p-3">
+                    <h6 class="mb-3"><i class="bi bi-exclamation-triangle text-warning"></i> 常见错误</h6>
+                    <ul class="list-group list-group-flush" id="mistakesArea">
+                        ${mod.common_mistakes.map((m, i) => `
+                            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center" style="font-size:0.9rem;">
+                                <span><span class="text-warning me-1">⚠</span>${m}</span>
+                                <a href="#" class="text-danger small" onclick="removeMistake(${i})">删除</a>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="input-group mt-2">
+                        <input type="text" class="form-control form-control-sm" id="newMistake" placeholder="添加常见错误...">
+                        <button class="btn btn-sm btn-outline-warning" onclick="addMistake()">添加</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm" style="border-radius:12px;">
+                <div class="card-body p-3">
+                    <h6 class="mb-3"><i class="bi bi-star text-success"></i> 学习技巧</h6>
+                    <ul class="list-group list-group-flush" id="tipsArea">
+                        ${mod.tips.map((t, i) => `
+                            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center" style="font-size:0.9rem;">
+                                <span><span class="text-success me-1">💡</span>${t}</span>
+                                <a href="#" class="text-danger small" onclick="removeTip(${i})">删除</a>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="input-group mt-2">
+                        <input type="text" class="form-control form-control-sm" id="newTip" placeholder="添加学习技巧...">
+                        <button class="btn btn-sm btn-outline-success" onclick="addTip()">添加</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：任务知识点 -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm" style="border-radius:12px;">
+                <div class="card-body p-3">
+                    <h6 class="mb-3"><i class="bi bi-journal-text"></i> 任务知识点</h6>
+                    <div class="accordion" id="taskAccordion">
+                        ${Object.entries(mod.task_knowledge || {}).map(([taskId, tk], idx) => `
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button ${idx > 0 ? 'collapsed' : ''}" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#task_${taskId}">
+                                    <strong>${taskId}</strong>
+                                    <small class="ms-2 text-muted">${tk.chapter || ''}</small>
+                                </button>
+                            </h2>
+                            <div id="task_${taskId}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}">
+                                <div class="accordion-body">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">章节名称</label>
+                                        <input type="text" class="form-control form-control-sm" value="${tk.chapter || ''}"
+                                            onchange="updateTaskField('${taskId}','chapter',this.value)">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">技能标签（逗号分隔）</label>
+                                        <input type="text" class="form-control form-control-sm" value="${(tk.skills || []).join(', ')}"
+                                            onchange="updateTaskSkills('${taskId}',this.value)">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">知识点要求</label>
+                                        <div id="keypoints_${taskId}">
+                                            ${(tk.key_points || []).map((kp, ki) => `
+                                                <div class="input-group mb-1">
+                                                    <input type="text" class="form-control form-control-sm" value="${kp}"
+                                                        onchange="updateKeyPoint('${taskId}',${ki},this.value)">
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="removeKeyPoint('${taskId}',${ki})">×</button>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary mt-1" onclick="addKeyPoint('${taskId}')">
+                                            <i class="bi bi-plus"></i> 添加知识点
+                                        </button>
+                                    </div>
+                                    <button class="btn btn-sm btn-primary" onclick="saveTask('${taskId}')">
+                                        <i class="bi bi-check"></i> 保存该任务
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    container.innerHTML = html;
+}
+
+// === 概念管理 ===
+function addConcept() {
+    const input = document.getElementById('newConcept');
+    const val = input.value.trim();
+    if (!val) return;
+    kbData[currentModule].concepts.push(val);
+    saveModule();
+    input.value = '';
+}
+
+function removeConcept(idx) {
+    kbData[currentModule].concepts.splice(idx, 1);
+    saveModule();
+}
+
+// === 常见错误管理 ===
+function addMistake() {
+    const input = document.getElementById('newMistake');
+    const val = input.value.trim();
+    if (!val) return;
+    kbData[currentModule].common_mistakes.push(val);
+    saveModule();
+    input.value = '';
+}
+
+function removeMistake(idx) {
+    kbData[currentModule].common_mistakes.splice(idx, 1);
+    saveModule();
+}
+
+// === 学习技巧管理 ===
+function addTip() {
+    const input = document.getElementById('newTip');
+    const val = input.value.trim();
+    if (!val) return;
+    kbData[currentModule].tips.push(val);
+    saveModule();
+    input.value = '';
+}
+
+function removeTip(idx) {
+    kbData[currentModule].tips.splice(idx, 1);
+    saveModule();
+}
+
+// === 任务知识点管理 ===
+function updateTaskField(taskId, field, value) {
+    if (!kbData[currentModule].task_knowledge[taskId]) return;
+    kbData[currentModule].task_knowledge[taskId][field] = value;
+}
+
+function updateTaskSkills(taskId, value) {
+    if (!kbData[currentModule].task_knowledge[taskId]) return;
+    kbData[currentModule].task_knowledge[taskId].skills = value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+}
+
+function updateKeyPoint(taskId, idx, value) {
+    kbData[currentModule].task_knowledge[taskId].key_points[idx] = value;
+}
+
+function addKeyPoint(taskId) {
+    kbData[currentModule].task_knowledge[taskId].key_points.push('新知识点');
+    renderModule(currentModule);
+}
+
+function removeKeyPoint(taskId, idx) {
+    kbData[currentModule].task_knowledge[taskId].key_points.splice(idx, 1);
+    renderModule(currentModule);
+}
+
+// === 保存 ===
+async function saveModule() {
+    const mod = kbData[currentModule];
+    const resp = await fetch(`/api/knowledge-base/module/${currentModule}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(mod)
+    });
+    const data = await resp.json();
+    if (data.success) {
+        showToast('保存成功');
+        renderModule(currentModule);
+    } else {
+        alert('保存失败: ' + data.message);
+    }
+}
+
+async function saveTask(taskId) {
+    const tk = kbData[currentModule].task_knowledge[taskId];
+    const resp = await fetch(`/api/knowledge-base/task/${taskId}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(tk)
+    });
+    const data = await resp.json();
+    showToast(data.success ? '保存成功' : '保存失败: ' + data.message);
+}
+
+async function resetKB() {
+    if (!confirm('确定要恢复默认知识库吗？所有修改将丢失。')) return;
+    const resp = await fetch('/api/knowledge-base/reset', {method: 'POST'});
+    const data = await resp.json();
+    if (data.success) {
+        showToast('已恢复默认知识库');
+        loadKB();
+    }
+}
+
+function showToast(msg) {
+    const toast = document.createElement('div');
+    toast.className = 'position-fixed top-0 end-0 p-3';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `<div class="alert alert-success py-2 px-3" style="border-radius:10px;"><i class="bi bi-check-circle"></i> ${msg}</div>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
+
+// 页面加载
+loadKB();
+</script>
+{% endblock %}

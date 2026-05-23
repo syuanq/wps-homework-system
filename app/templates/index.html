@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block title %}提交作业 - 基于DeepSeek的WPS作业智能批阅与分层推送决策系统{% endblock %}
+
+{% block content %}
+<!-- Hero区域 -->
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <h1><i class="bi bi-stars"></i> WPS作业智能批阅系统</h1>
+                <p>基于《信息技术基础（WPS Office）》教材，自动评价Word/Excel/PPT作业操作步骤，AI智能生成个性化分层学习任务</p>
+            </div>
+            <div class="col-lg-5 text-center d-none d-lg-block">
+                <i class="bi bi-file-earmark-check" style="font-size: 6rem; opacity: 0.3;"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <!-- 功能特点 -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card feature-card">
+                <div class="card-body">
+                    <div class="feature-icon" style="background: #ebf8ff; color: #2b6cb0;">
+                        <i class="bi bi-file-earmark-word"></i>
+                    </div>
+                    <h5>多格式支持</h5>
+                    <p class="text-muted mb-0">支持Word(.docx)、Excel(.xlsx)、PowerPoint(.pptx)三种格式的作业文件</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card">
+                <div class="card-body">
+                    <div class="feature-icon" style="background: #f0fff4; color: #38a169;">
+                        <i class="bi bi-check2-square"></i>
+                    </div>
+                    <h5>操作步骤评分</h5>
+                    <p class="text-muted mb-0">根据教材操作步骤逐项检查，自动评分并给出详细的评分报告</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card">
+                <div class="card-body">
+                    <div class="feature-icon" style="background: #fffaf0; color: #dd6b20;">
+                        <i class="bi bi-layers"></i>
+                    </div>
+                    <h5>AI分层任务</h5>
+                    <p class="text-muted mb-0">基于DeepSeek AI，根据成绩智能生成个性化分层学习任务</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提交表单 -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h4 class="mb-4"><i class="bi bi-pencil-square"></i> 提交作业</h4>
+
+                    <!-- 步骤1：选择任务 -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3"><span class="badge bg-primary me-2">步骤1</span>选择作业任务</h6>
+
+                        <!-- 三个选项卡 -->
+                        <ul class="nav nav-tabs mb-3" id="moduleTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="tab-wps_word" data-bs-toggle="tab" data-bs-target="#panel-wps_word" type="button" role="tab" onclick="switchTab('wps_word')">
+                                    <i class="bi bi-file-earmark-word me-1"></i> WPS文档
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab-wps_excel" data-bs-toggle="tab" data-bs-target="#panel-wps_excel" type="button" role="tab" onclick="switchTab('wps_excel')">
+                                    <i class="bi bi-file-earmark-excel me-1"></i> WPS表格
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab-wps_ppt" data-bs-toggle="tab" data-bs-target="#panel-wps_ppt" type="button" role="tab" onclick="switchTab('wps_ppt')">
+                                    <i class="bi bi-file-earmark-ppt me-1"></i> WPS演示
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="modulePanels">
+                            <div class="tab-pane fade show active" id="panel-wps_word" role="tabpanel">
+                                <div id="taskList_wps_word" class="row g-3">
+                                    <div class="col-12 text-center py-3"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="panel-wps_excel" role="tabpanel">
+                                <div id="taskList_wps_excel" class="row g-3">
+                                    <div class="col-12 text-center py-3"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="panel-wps_ppt" role="tabpanel">
+                                <div id="taskList_wps_ppt" class="row g-3">
+                                    <div class="col-12 text-center py-3"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 步骤2：上传文件 -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3"><span class="badge bg-primary me-2">步骤2</span>上传作业文件</h6>
+                        <div class="alert alert-info small mb-3" style="border-radius: 8px;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            文件名格式：姓名+班级（如：张三+计科1班_task_4_2.docx 或 张三_计科1班_task_4_2.docx），系统将自动从文件名中解析姓名和班级。
+                        </div>
+                        <label class="upload-area" id="uploadArea" for="fileInput">
+                            <i class="bi bi-cloud-arrow-up d-block mb-3"></i>
+                            <p class="mb-1">拖拽文件到此处，或 <span class="text-primary fw-bold">点击选择文件</span></p>
+                            <p class="text-muted small mb-0" id="fileHint">请先选择作业任务</p>
+                            <input type="file" id="fileInput" class="d-none">
+                        </label>
+                        <div id="fileInfo" class="mt-3 d-none">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                                <i class="bi bi-file-earmark fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-bold" id="fileName"></div>
+                                    <small class="text-muted" id="fileSize"></small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="clearFile()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <!-- 解析出的学生信息 -->
+                            <div id="parsedStudentInfo" class="mt-2 d-none">
+                                <div class="d-flex align-items-center p-2 bg-success bg-opacity-10 rounded-2">
+                                    <i class="bi bi-person-check fs-5 text-success me-2"></i>
+                                    <small class="text-success">
+                                        <strong>姓名：</strong><span id="parsedName"></span>
+                                        &nbsp;&nbsp;
+                                        <strong>班级：</strong><span id="parsedClass"></span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <div class="text-center">
+                        <button class="btn btn-primary btn-lg px-5" id="submitBtn" onclick="submitHomework()" disabled>
+                            <i class="bi bi-send"></i> 提交并评分
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 加载遮罩 -->
+<div class="loading-overlay d-none" id="loadingOverlay">
+    <div class="loading-box">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h5 id="loadingText">正在评分中...</h5>
+        <p class="text-muted">请稍候，系统正在分析您的作业</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedTask = null;
+let currentTab = 'wps_word';
+let allGroups = {};
+
+// 从文件名解析姓名和班级
+function parseStudentInfo(filename) {
+    let name = filename.replace(/\.[^.]+$/, '');
+    let studentName = '';
+    let studentClass = '';
+
+    if (name.includes('+')) {
+        const parts = name.split('+');
+        studentName = parts[0].trim();
+        const rest = parts.slice(1).join('+').trim();
+        if (rest.includes('_')) {
+            studentClass = rest.split('_')[0].trim();
+        } else {
+            studentClass = rest;
+        }
+    } else if (name.includes('_')) {
+        const parts = name.split('_');
+        studentName = parts[0].trim();
+        studentClass = parts[1].trim();
+    }
+
+    if (!studentName) {
+        studentName = name;
+    }
+
+    return { studentName, studentClass };
+}
+
+// 加载任务列表
+async function loadTasks() {
+    try {
+        const resp = await fetch('/api/tasks/grouped');
+        const data = await resp.json();
+        if (data.success) {
+            allGroups = data.groups;
+            renderTab('wps_word');
+            renderTab('wps_excel');
+            renderTab('wps_ppt');
+        }
+    } catch(e) {
+        console.error('加载任务失败:', e);
+    }
+}
+
+// 切换选项卡
+function switchTab(tabKey) {
+    currentTab = tabKey;
+    // 如果当前选中的任务不属于当前tab，取消选中
+    if (selectedTask && allGroups[tabKey]) {
+        const taskIds = allGroups[tabKey].tasks.map(t => t.task_id);
+        if (!taskIds.includes(selectedTask)) {
+            selectedTask = null;
+            document.querySelectorAll('.task-card').forEach(c => c.classList.remove('selected'));
+            checkSubmitReady();
+        }
+    }
+}
+
+// 渲染单个选项卡的任务
+function renderTab(tabKey) {
+    const group = allGroups[tabKey];
+    if (!group) return;
+
+    const container = document.getElementById('taskList_' + tabKey);
+    if (!container) return;
+
+    const typeIcons = {
+        'docx': 'bi-file-earmark-word',
+        'xlsx': 'bi-file-earmark-excel',
+        'pptx': 'bi-file-earmark-ppt'
+    };
+    const typeColors = {
+        'docx': '#2b5797',
+        'xlsx': '#217346',
+        'pptx': '#d24726'
+    };
+
+    let html = '';
+    group.tasks.forEach(task => {
+        html += `
+            <div class="col-md-6 col-lg-4">
+                <div class="task-card" onclick="selectTask('${task.task_id}')" id="task_${task.task_id}">
+                    <div class="d-flex align-items-start mb-2">
+                        <div class="task-check me-3">
+                            <i class="bi bi-check2"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${task.task_name}</div>
+                            <small class="text-muted">${task.module}</small>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-2">${task.description.substring(0, 60)}...</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge" style="background: ${typeColors[task.file_type]}20; color: ${typeColors[task.file_type]}">
+                            <i class="bi ${typeIcons[task.file_type]}"></i> .${task.file_type}
+                        </span>
+                        <small class="text-muted">${task.check_items_count}个检查项 | 满分${task.max_score}</small>
+                    </div>
+                </div>
+            </div>`;
+    });
+
+    if (!html) {
+        html = '<div class="col-12 text-center text-muted py-3">暂无任务</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+// 选择任务
+function selectTask(taskId) {
+    selectedTask = taskId;
+    document.querySelectorAll('.task-card').forEach(c => c.classList.remove('selected'));
+    const el = document.getElementById('task_' + taskId);
+    if (el) el.classList.add('selected');
+
+    // 更新文件提示
+    const typeMap = { 'docx': 'Word(.docx)', 'xlsx': 'Excel(.xlsx)', 'pptx': 'PowerPoint(.pptx)' };
+    let fileType = 'docx';
+    if (taskId.startsWith('task_5')) fileType = 'xlsx';
+    else if (taskId.startsWith('task_6')) fileType = 'pptx';
+    document.getElementById('fileHint').textContent = '支持格式：' + (typeMap[fileType] || '');
+
+    // 更新文件输入
+    const acceptMap = { 'docx': '.docx', 'xlsx': '.xlsx', 'pptx': '.pptx' };
+    document.getElementById('fileInput').accept = acceptMap[fileType] || '';
+
+    checkSubmitReady();
+}
+
+// 文件上传区域
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+    }
+});
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatFileSize(file.size);
+    document.getElementById('fileInfo').classList.remove('d-none');
+    uploadArea.classList.add('d-none');
+
+    const info = parseStudentInfo(file.name);
+    if (info.studentName) {
+        document.getElementById('parsedName').textContent = info.studentName;
+        document.getElementById('parsedClass').textContent = info.studentClass || '未识别';
+        document.getElementById('parsedStudentInfo').classList.remove('d-none');
+    } else {
+        document.getElementById('parsedStudentInfo').classList.add('d-none');
+    }
+
+    checkSubmitReady();
+}
+
+function clearFile() {
+    fileInput.value = '';
+    document.getElementById('fileInfo').classList.add('d-none');
+    document.getElementById('parsedStudentInfo').classList.add('d-none');
+    uploadArea.classList.remove('d-none');
+    checkSubmitReady();
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function checkSubmitReady() {
+    const ready = selectedTask && fileInput.files.length > 0;
+    document.getElementById('submitBtn').disabled = !ready;
+}
+
+// 提交作业
+async function submitHomework() {
+    if (!selectedTask || !fileInput.files.length) return;
+
+    const formData = new FormData();
+    formData.append('task_id', selectedTask);
+    formData.append('file', fileInput.files[0]);
+
+    document.getElementById('loadingOverlay').classList.remove('d-none');
+    document.getElementById('submitBtn').disabled = true;
+
+    try {
+        const resp = await fetch('/api/submit', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            window.location.href = '/result/' + data.submission_id;
+        } else {
+            alert('提交失败：' + data.message);
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('loadingOverlay').classList.add('d-none');
+        }
+    } catch(e) {
+        alert('网络错误，请重试');
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('loadingOverlay').classList.add('d-none');
+    }
+}
+
+// 页面加载时获取任务列表
+loadTasks();
+</script>
+{% endblock %}
