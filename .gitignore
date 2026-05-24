@@ -52,6 +52,7 @@ data/*.json
 *.log
 *.tmp
 *.bak
+~$*.docx
 
 # 申报文档（包含个人信息）
 申报文档/
